@@ -446,7 +446,7 @@ message Atom {
         AudioPowerUsageDataReported audio_power_usage_data_reported = 275;
         TvTunerStateChanged tv_tuner_state_changed = 276 [(module) = "framework"];
         MediaOutputOpSwitchReported mediaoutput_op_switch_reported =
-            277 [(module) = "settings"];
+            277 [(module) = "sysui"];
         CellBroadcastMessageFiltered cb_message_filtered =
             278 [(module) = "cellbroadcast"];
         TvTunerDvrStatus tv_tuner_dvr_status = 279 [(module) = "framework"];
@@ -514,13 +514,14 @@ message Atom {
         WifiPnoScanReported wifi_pno_scan_reported = 326  [(module) = "wifi"];
         TifTuneStateChanged tif_tune_changed = 327 [(module) = "framework"];
         AutoRotateReported auto_rotate_reported = 328 [(module) = "framework"];
+        PerfettoTrigger perfetto_trigger = 329 [(module) = "perfetto"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
     }
 
     // Pulled events will start at field 10000.
-    // Next: 10092
+    // Next: 10097
     oneof pulled {
         WifiBytesTransfer wifi_bytes_transfer = 10000 [(module) = "framework"];
         WifiBytesTransferByFgBg wifi_bytes_transfer_by_fg_bg = 10001 [(module) = "framework"];
@@ -626,6 +627,10 @@ message Atom {
         CellularServiceState cellular_service_state = 10090 [(module) = "telephony"];
         CellularDataServiceSwitch cellular_data_service_switch = 10091 [(module) = "telephony"];
         SystemMemory system_memory = 10092 [(module) = "framework"];
+        ImsRegistrationTermination ims_registration_termination = 10093 [(module) = "telephony"];
+        ImsRegistrationStats ims_registration_stats = 10094 [(module) = "telephony"];
+        CpuTimePerClusterFreq cpu_time_per_cluster_freq = 10095 [(module) = "framework"];
+        CpuCyclesPerUidCluster cpu_cycles_per_uid_cluster = 10096 [(module) = "framework"];
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
@@ -5314,6 +5319,8 @@ message BlobOpened{
  *
  * Logged from:
  *  frameworks/base/core/java/com/android/internal/jank/FrameTracker.java
+ *
+ * Next Tag: 6
  */
 message UIInteractionFrameInfoReported {
     enum InteractionType {
@@ -5345,6 +5352,9 @@ message UIInteractionFrameInfoReported {
     // Number of frames that were skipped in rendering during the interaction.
     optional int64 missed_frames = 3;
 
+    // Number of frames that were missed in Surface Flinger during the interaction.
+    optional int64 sf_missed_frames = 5;
+
     // Maximum time it took to render a single frame during the interaction.
     optional int64 max_frame_time_nanos = 4;
 }
@@ -5366,6 +5376,7 @@ message UIActionLatencyReported {
         ACTION_TURN_ON_SCREEN = 6;
         ACTION_ROTATE_SCREEN = 7;
         ACTION_FACE_WAKE_AND_UNLOCK = 8;
+        ACTION_START_RECENTS_ANIMATION = 9;
     }
 
     optional ActionType action = 1;
@@ -5607,6 +5618,17 @@ message CpuTimePerFreq {
 }
 
 /**
+ * Pulls Cpu time per cluster per frequency.
+ * This is tracked by the time_in_state eBPF program.
+ */
+message CpuTimePerClusterFreq {
+    optional uint32 cluster = 1;
+    optional uint32 freq_khz = 2;
+    // Time spent at this frequency excluding sleep since tracking started.
+    optional uint64 time_millis = 3;
+}
+
+/**
  * Pulls Cpu Time Per Uid.
  * Note that isolated process uid time should be attributed to host uids.
  */
@@ -5617,9 +5639,29 @@ message CpuTimePerUid {
 }
 
 /**
+ * Pulls Cpu Cycles Per Uid Per Cluster.
+ * Note that uids are transformed to reduce the number of uploaded entries. Shared GIDs are
+ * combined under single uid LAST_SHARED_APPLICATION_GID. Individual isolated uids are excluded
+ * because they are recycled and removed from the underlying data source. All uids are normalized
+ * to their base uids.
+ */
+message CpuCyclesPerUidCluster {
+    optional int32 uid = 1 [(is_uid) = true];
+    optional int32 cluster = 2;
+    // Megacycles, i.e. millions of cycles.
+    optional int64 mcycles = 3;
+    // Time excluding sleep since tracking started.
+    optional int64 time_millis = 4;
+    // Power estimate: time * average power for frequency / 1000.
+    optional int64 power_profile_estimate = 5;
+}
+
+/**
  * Pulls Cpu Time Per Uid per frequency.
- * Note that isolated process uid time should be attributed to host uids.
- * For each uid, we order the time by descending frequencies.
+ * Note that uids are transformed to reduce the number of uploaded entries. Shared GIDs are
+ * combined under single uid LAST_SHARED_APPLICATION_GID. Individual isolated uids are excluded
+ * because they are recycled and removed from the underlying data source. All uids are normalized
+ * to their base uids.
  */
 message CpuTimePerUidFreq {
     optional int32 uid = 1 [(is_uid) = true];
@@ -8214,6 +8256,10 @@ message MediametricsCodecReported {
     optional int64 media_apex_version = 4;
 
     optional android.stats.mediametrics.CodecData codec_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
+
+    // Randomly generated playback ID. A Base64 encoded hex string representing a 128-bit integer.
+    // This field is the same as that in MediametricsPlaybackReported for the same playback.
+    optional string playback_id = 6;
 }
 
 /**
@@ -9818,31 +9864,59 @@ message RebootEscrowRecoveryReported {
  *    frameworks/native/services/surfaceflinger/TimeStats/TimeStats.cpp
  */
 message SurfaceflingerStatsGlobalInfo {
+    // Aggregated refresh rate buckets that layers were presenting at. Buckets
+    // are defined in SurfaceFlinger and are tracked per device.
+    // Introduced in Android 12.
+    // This is intended to be used as a dimenstion in collecting per-refresh rate
+    // jank statistics.
+    optional int32 display_refresh_rate_bucket = 18;
+    // Aggregated render rate buckets that layers were overridden to run at.
+    // Buckets are defined in SurfaceFlinger and are tracked per device.
+    // Introduced in Android 12.
+    // This is intended to be used as a dimension in collecting per-render rate
+    // jank statistics.
+    optional int32 render_rate_bucket = 21;
     // Total number of frames presented during the tracing period
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional int64 total_frames = 1;
     // Total number of frames missed
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional int64 missed_frames = 2;
     // Total number of frames that fell back to client composition
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional int64 client_composition_frames = 3;
     // Total time the display was turned on
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional int64 display_on_millis = 4;
     // Total time that was spent performing animations.
-    // This is derived from the present-to-present layer histogram
+    // This is derived from the present-to-present layer histogram.
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional int64 animation_millis = 5;
     // Total number of event connections tracked by SurfaceFlinger at the time
     // of this pull. If this number grows prohibitively large, then this can
     // cause jank due to resource contention.
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional int32 event_connection_count = 6;
     // Set of timings measured from when SurfaceFlinger began compositing a
     // frame, until the frame was requested to be presented to the display. This
     // measures SurfaceFlinger's total CPU walltime on the critical path per
     // frame.
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional FrameTimingHistogram frame_duration = 7
         [(android.os.statsd.log_mode) = MODE_BYTES];
     // Set of timings measured from when SurfaceFlinger first began using the
     // GPU to composite a frame, until the GPU has finished compositing that
     // frame. This measures the total additional time SurfaceFlinger needed to
     // perform due to falling back into GPU composition.
+    // Note: This stat is not sliced by dimension. It will be duplicated for metrics
+    // using render_rate_bucket as a dimension.
     optional FrameTimingHistogram render_engine_timing = 8
         [(android.os.statsd.log_mode) = MODE_BYTES];
     // Number of frames where SF saw a frame, based on its frame timeline.
@@ -9866,8 +9940,34 @@ message SurfaceflingerStatsGlobalInfo {
     // there was not an attributed reason
     // Introduced in Android 12.
     optional int32 total_janky_frames_app_unattributed = 14;
+    // Number of janky frames that were caused because of scheduling errors in
+    // SF that resulted in early present (e.g., SF sending a buffer to the
+    // composition engine earlier than expected, resulting in a present that is
+    // one vsync early)
+    // Introduced in Android 12.
+    optional int32 total_janky_frames_sf_scheduling = 15;
+    // Number of frames that were classified as jank because of possible drift in
+    // vsync predictions.
+    // Introduced in Android 12.
+    optional int32 total_jank_frames_sf_prediction_error = 16;
+    // Number of janky frames where the app was in a buffer stuffed state (more
+    // than one buffer ready to be presented at the same vsync). Usually caused
+    // when the first frame is unusually long, the following frames enter into a
+    // stuffed state.
+    // Introduced in Android 12.
+    optional int32 total_jank_frames_app_buffer_stuffing = 17;
+    // Buckets of timings in ms by which SurfaceFlinger's deadline was missed
+    // while latching and presenting frames.
+    // Introduced in Android 12.
+    optional FrameTimingHistogram sf_deadline_misses = 19
+        [(android.os.statsd.log_mode) = MODE_BYTES];
+    // Buckets of timings in ms by which the Vsync prediction drifted, when
+    // compared to the actual hardware vsync.
+    // Introduced in Android 12.
+    optional FrameTimingHistogram sf_prediction_errors = 20
+        [(android.os.statsd.log_mode) = MODE_BYTES];
 
-    // Next ID: 15
+    // Next ID: 22
 }
 
 /**
@@ -9883,6 +9983,18 @@ message SurfaceflingerStatsLayerInfo {
     // statistics to applications.
     // Introduced in Android 12.
     optional int32 uid = 12 [(is_uid) = true];
+    // Refresh rate bucket that the layer was presenting at. Buckets are
+    // defined in SurfaceFlinger and are tracked per device.
+    // Introduced in Android 12.
+    // This is intended to be used as a dimension in collecting per-refresh rate
+    // jank statistics
+    optional int32 display_refresh_rate_bucket = 22;
+    // Render rate bucket that the layer was submitting frames at. Buckets are
+    // defined in SurfaceFlinger and are tracked per device.
+    // Introduced in Android 12.
+    // This is intended to be used as a dimension in collecting per-render rate
+    // jank statistics.
+    optional int32 render_rate_bucket = 23;
     // The layer for this set of metrics
     // In many scenarios the package name is included in the layer name, e.g.,
     // layers created by Window Manager. But this is not a guarantee - in the
@@ -9941,8 +10053,62 @@ message SurfaceflingerStatsLayerInfo {
     // there was not an attributed reason
     // Introduced in Android 12.
     optional int32 total_janky_frames_app_unattributed = 18;
+    // Number of janky frames that were caused because of scheduling errors in
+    // SF that resulted in early present (e.g., SF sending a buffer to the
+    // composition engine earlier than expected, resulting in a present that is
+    // one vsync early)
+    // Introduced in Android 12.
+    optional int32 total_janky_frames_sf_scheduling = 19;
+    // Number of frames that were classified as jank because of possible drift in
+    // vsync predictions.
+    // Introduced in Android 12.
+    optional int32 total_jank_frames_sf_prediction_error = 20;
+    // Number of janky frames where the app was in a buffer stuffed state (more
+    // than one buffer ready to be presented at the same vsync). Usually caused
+    // when the first frame is unusually long, the following frames enter into a
+    // stuffed state.
+    // Introduced in Android 12.
+    optional int32 total_jank_frames_app_buffer_stuffing = 21;
 
-    // Next ID: 19
+    /**
+     * Encapsulates the FrameRateVote information sent by the application while
+     * calling setFrameRate.
+     * Metrics exist beginning in Android 12.
+     */
+    message SetFrameRateVote {
+        // The desired frame rate the application wishes to run on.
+        optional float frame_rate = 1;
+
+        enum FrameRateCompatibility {
+            FRAME_RATE_UNDEFINED = 0;
+            FRAME_RATE_DEFAULT = 1;
+            FRAME_RATE_EXACT_OR_MULTIPLE = 2;
+        }
+
+        // Specifies how to interpret the frame rate associated with the layer.
+        // Defined in Layer.h
+        optional FrameRateCompatibility frame_rate_compatibility = 2;
+
+        enum Seamlessness {
+            SEAMLESS_UNDEFINED = 0;
+            SEAMLESS_SHOULD_BE_SEAMLESS = 1;
+            SEAMLESS_NOT_REQUIRED = 2;
+        }
+        // Indicates whether seamless refresh rate switch is required or not.
+        optional Seamlessness seamlessness = 3;
+    }
+
+    // The last frame rate vote set by the application.
+    // Introduced in Android 12.
+    optional SetFrameRateVote set_frame_rate_vote = 24
+        [(android.os.statsd.log_mode) = MODE_BYTES];
+    // Buckets of timings in ms by which the app deadline was missed while
+    // submitting work for a frame.
+    // Introduced in Android 12.
+    optional FrameTimingHistogram app_deadline_misses = 25
+        [(android.os.statsd.log_mode) = MODE_BYTES];
+
+    // Next ID: 26
 }
 
 /**
@@ -10091,27 +10257,89 @@ message AppCompatibilityChangeReported {
 /**
  * Logged from
  *     external/perfetto/src/perfetto_cmd/perfetto_cmd.cc
+ *     external/perfetto/src/tracing/service/tracing_service_impl.cc
  */
 message PerfettoUploaded {
+    // TODO(lalitm): many of the atoms below should be renamed to have a
+    // "PERFETTO_CMD" prefix to make clear they are specific to perfetto_cmd.
+    // This will be done after the server side is ready for this change.
+    // Next id: 47.
     enum Event {
         PERFETTO_UNDEFINED = 0;
+
+        // Checkpoints inside perfetto_cmd before tracing is finished.
         PERFETTO_TRACE_BEGIN = 1;
         PERFETTO_BACKGROUND_TRACE_BEGIN = 2;
         PERFETTO_ON_CONNECT = 3;
-        PERFETTO_ON_TRACING_DISABLED = 4;
-        PERFETTO_UPLOAD_DROPBOX_BEGIN = 5;
-        PERFETTO_UPLOAD_DROPBOX_SUCCESS = 6;
-        PERFETTO_UPLOAD_DROPBOX_FAILURE = 7;
-        PERFETTO_UPLOAD_INCIDENT_BEGIN = 8;
-        PERFETTO_UPLOAD_INCIDENT_SUCCESS = 9;
-        PERFETTO_UPLOAD_INCIDENT_FAILURE = 10;
-        PERFETTO_FINALIZE_TRACE_AND_EXIT = 11;
-        PERFETTO_TRIGGER_BEGIN = 12;
-        PERFETTO_TRIGGER_SUCCESS = 13;
-        PERFETTO_TRIGGER_FAILURE = 14;
-        PERFETTO_HIT_GUARDRAILS = 15;
+
+        // Guardrails inside perfetto_cmd before tracing is finished.
         PERFETTO_ON_TIMEOUT = 16;
+        PERFETTO_CMD_USER_BUILD_TRACING_NOT_ALLOWED = 43;
+        PERFETTO_CMD_FAILED_TO_INIT_GUARDRAIL_STATE = 44;
+        PERFETTO_CMD_INVALID_GUARDRAIL_STATE = 45;
+        PERFETTO_CMD_HIT_UPLOAD_LIMIT = 46;
+
+        // Checkpoints inside traced.
+        PERFETTO_TRACED_ENABLE_TRACING = 37;
+        PERFETTO_TRACED_START_TRACING = 38;
+        PERFETTO_TRACED_DISABLE_TRACING = 39;
+        PERFETTO_TRACED_NOTIFY_TRACING_DISABLED = 40;
+
+        // Trigger checkpoints inside traced.
+        // These atoms are special because, along with the UUID,
+        // they log the trigger name.
+        PERFETTO_TRACED_TRIGGER_START_TRACING = 41;
+        PERFETTO_TRACED_TRIGGER_STOP_TRACING = 42;
+
+        // Guardrails inside traced.
+        PERFETTO_TRACED_ENABLE_TRACING_EXISTING_TRACE_SESSION = 18;
+        PERFETTO_TRACED_ENABLE_TRACING_TOO_LONG_TRACE = 19;
+        PERFETTO_TRACED_ENABLE_TRACING_INVALID_TRIGGER_TIMEOUT = 20;
+        PERFETTO_TRACED_ENABLE_TRACING_DURATION_WITH_TRIGGER = 21;
+        PERFETTO_TRACED_ENABLE_TRACING_STOP_TRACING_WRITE_INTO_FILE = 22;
+        PERFETTO_TRACED_ENABLE_TRACING_DUPLICATE_TRIGGER_NAME = 23;
+        PERFETTO_TRACED_ENABLE_TRACING_INVALID_DEFERRED_START = 24;
+        PERFETTO_TRACED_ENABLE_TRACING_INVALID_BUFFER_SIZE = 25;
+        PERFETTO_TRACED_ENABLE_TRACING_BUFFER_SIZE_TOO_LARGE = 26;
+        PERFETTO_TRACED_ENABLE_TRACING_TOO_MANY_BUFFERS = 27;
+        PERFETTO_TRACED_ENABLE_TRACING_DUPLICATE_SESSION_NAME = 28;
+        PERFETTO_TRACED_ENABLE_TRACING_SESSION_NAME_TOO_RECENT = 29;
+        PERFETTO_TRACED_ENABLE_TRACING_TOO_MANY_SESSIONS_FOR_UID = 30;
+        PERFETTO_TRACED_ENABLE_TRACING_TOO_MANY_CONCURRENT_SESSIONS = 31;
+        PERFETTO_TRACED_ENABLE_TRACING_INVALID_FD_OUTPUT_FILE = 32;
+        PERFETTO_TRACED_ENABLE_TRACING_FAILED_TO_CREATE_FILE = 33;
+        PERFETTO_TRACED_ENABLE_TRACING_OOM = 34;
+        PERFETTO_TRACED_ENABLE_TRACING_UNKNOWN_ERROR = 35;
+        PERFETTO_TRACED_START_TRACING_INVALID_SESSION_STATE = 36;
+
+        // Checkpoints inside perfetto_cmd after tracing has finished.
+        PERFETTO_ON_TRACING_DISABLED = 4;
+        PERFETTO_UPLOAD_INCIDENT_BEGIN = 8;
+        PERFETTO_FINALIZE_TRACE_AND_EXIT = 11;
         PERFETTO_NOT_UPLOADING_EMPTY_TRACE = 17;
+
+        // Guardrails inside perfetto_cmd after tracing has finished.
+        PERFETTO_UPLOAD_INCIDENT_FAILURE = 10;
+
+        // Deprecated as "success" is misleading; it simply means we were
+        // able to communicate with incidentd. Will be removed once
+        // incidentd is properly instrumented.
+        PERFETTO_UPLOAD_INCIDENT_SUCCESS = 9 [deprecated = true];
+
+        // Deprecated as has the potential to be too spammy. Will be
+        // replaced with a whole new atom proto which uses a count metric
+        // instead of the event metric used for this proto.
+        PERFETTO_TRIGGER_BEGIN = 12 [deprecated = true];
+        PERFETTO_TRIGGER_SUCCESS = 13 [deprecated = true];
+        PERFETTO_TRIGGER_FAILURE = 14  [deprecated = true];
+
+        // Deprecated as too coarse grained to be useful. Will be replaced
+        // with better broken down atoms as we do with traced.
+        PERFETTO_HIT_GUARDRAILS = 15 [deprecated = true];
+
+        // Contained status of Dropbox uploads. Removed as Perfetto no
+        // longer supports uploading traces using Dropbox.
+        reserved 5, 6, 7;
     }
 
     // Which stage of the pipeline we are reporting from.
@@ -10120,6 +10348,32 @@ message PerfettoUploaded {
     // UUID matching the one set inside the SystemInfo trace packet.
     optional int64 trace_uuid_lsb = 2;
     optional int64 trace_uuid_msb = 3;
+
+    // For trigger checkpoints inside traced, contains the trigger name
+    // associated with this trace UUID.
+    optional string trigger_name = 4;
+}
+
+/**
+ * Logged from
+ *     external/perfetto/src/tracing/service/tracing_service_impl.cc
+ */
+message PerfettoTrigger {
+    enum Event {
+        PERFETTO_UNDEFINED = 0;
+
+        PERFETTO_CMD_TRIGGER = 1;
+        PERFETTO_CMD_TRIGGER_FAIL = 2;
+
+        PERFETTO_TRIGGER_PERFETTO_TRIGGER = 3;
+        PERFETTO_TRIGGER_PERFETTO_TRIGGER_FAIL = 4;
+    }
+
+    // The event which fired.
+    optional Event event = 1;
+
+    // The name of the trigger which fired.
+    optional string trigger_name = 2;
 }
 
 /**
@@ -10469,6 +10723,14 @@ message TifTuneStateChanged {
     //              BinderService.createSession
     //              SessionState.sessionId
     optional string tif_session_id = 3 [(state_field_option).primary_field = true];
+    optional android.stats.tv.TifInputType type = 4;
+    // The id of this TV Input, only unique to a given TV Input Service.
+    // This is specifically NOT android.media.tv.TvInputInfo.getId()
+    // which is a string that contains the package name of its TvInputService.
+    optional int32 inputId = 5  [(state_field_option).primary_field = true];
+    // The HDMI port id
+    // Only valid when type == HDMI
+    optional int32 hdmiPort = 6  [(state_field_option).primary_field = true];
 }
 
 /**
@@ -10747,7 +11009,7 @@ message VoiceCallRatUsage {
     // Radio access technology.
     optional android.telephony.NetworkTypeEnum rat = 2;
 
-    // Total duration that voice calls spent on this carrier and RAT, rounded to 5 minute.
+    // Total duration that voice calls spent on this carrier and RAT, rounded to 5 minutes.
     optional int64 total_duration_seconds = 3;
 
     // Total number of calls using this carrier and RAT.
@@ -11079,7 +11341,7 @@ message DataCallSession {
     optional bool is_esim = 3;
 
     // Data profile of this call (for what purpose this call was made)
-    optional android.telephony.DataProfileEnum profile = 4;
+    optional android.telephony.DataProfileEnum profile = 4 [deprecated = true];
 
     // APN type bitmask of the APN used:
     // @ApnType in frameworks/base/telephony/java/android/telephony/Annotation.java.
@@ -11155,6 +11417,83 @@ message DataStallRecoveryReported {
 
     // Whether the device is in multi-SIM mode
     optional bool is_multi_sim = 6;
+}
+
+/**
+ * Pulls IMS registration terminations.
+ *
+ * Each pull generates multiple atoms, one for each termination condition happened during the day.
+ *
+ * Pulled from:
+ *   frameworks/opt/telephony/src/java/com/android/internal/telephony/metrics/MetricsCollector.java
+ */
+message ImsRegistrationTermination {
+    // Carrier ID of the SIM used for IMS registration.
+    // See https://source.android.com/devices/tech/config/carrierid.
+    optional int32 carrier_id = 1;
+
+    // Whether the device is in multi-SIM mode when the registration terminated.
+    optional bool is_multi_sim = 2;
+
+    // Radio access technology (RAT) used by the registration when it terminated.
+    // This can be IWLAN if IMS was registered over Wifi.
+    optional android.telephony.NetworkTypeEnum rat_at_end = 3;
+
+    // Whether the IMS registration failed before it was established.
+    optional bool setup_failed = 4;
+
+    // IMS reason code indicating the termination reason.
+    // See: frameworks/base/telephony/java/android/telephony/ims/ImsReasonInfo.java
+    optional int32 reason_code = 5;
+
+    // IMS extra code indicating the termination reason.
+    optional int32 extra_code = 6;
+
+    // IMS extra message indicating the termination reason.
+    // This string is truncated to 128 characters if its length exceeds the limit.
+    optional string extra_message = 7;
+
+    // Total number of instances of registration termination that matches the above conditions.
+    optional int32 count = 8;
+}
+
+/**
+ * Pulls IMS registration statistics.
+ *
+ * Each pull generates multiple atoms, one for each carrier, SIM slot, and radio access technology
+ * (RAT) combination. Durations are aggregated from all registrations with matching criteria,
+ * including ones that are currently active.
+ *
+ * Pulled from:
+ *   frameworks/opt/telephony/src/java/com/android/internal/telephony/metrics/MetricsCollector.java
+ */
+message ImsRegistrationStats {
+    // Carrier ID of the SIM used for IMS registration.
+    // See https://source.android.com/devices/tech/config/carrierid.
+    optional int32 carrier_id = 1;
+
+    // Index of the SIM used, 0 for single-SIM devices.
+    optional int32 sim_slot_index = 2;
+
+    // Radio access technology (RAT) used by the registration.
+    // This can be IWLAN if IMS was registered over Wifi.
+    optional android.telephony.NetworkTypeEnum rat = 3;
+
+    // Total time IMS was registered (connected time), rounded to 5 minutes.
+    optional int32 registered_seconds = 4;
+
+    // Durations that each feature (Voice, Video, UT, SMS) is capable (supported/enabled by the
+    // network/device) and available (registered and ready to use).
+    // All durations are rounded to 5 minutes and should be equal to or shorter than
+    // registered_seconds.
+    optional int32 voice_capable_seconds = 5;
+    optional int32 voice_available_seconds = 6;
+    optional int32 sms_capable_seconds = 7;
+    optional int32 sms_available_seconds = 8;
+    optional int32 video_capable_seconds = 9;
+    optional int32 video_available_seconds = 10;
+    optional int32 ut_capable_seconds = 11;
+    optional int32 ut_available_seconds = 12;
 }
 
 /**
@@ -11652,7 +11991,7 @@ message BytesTransferByTagAndMetered {
  * Logs when the Media Output Switcher finishes a media switch operation.
  *
  * Logged from:
- *  packages/apps/Settings/src/com/android/settings/media/MediaOutputSliceWorker.java
+ *  packages/SystemUI/src/com/android/systemui/media/dialog/MediaOutputMetricLogger.java
  */
 message MediaOutputOpSwitchReported {
     // Source medium type before switching.
