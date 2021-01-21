@@ -2831,4 +2831,9 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     ACCESSIBILITY_AUDIO_ADJUSTMENT = 1863;
+
+    // OPEN: Settings > Accessibility -> Accessibility shortcuts
+    // CATEGORY: SETTINGS
+    // OS: S
+    ACCESSIBILITY_SHORTCUTS_SETTINGS = 1864;
 }
