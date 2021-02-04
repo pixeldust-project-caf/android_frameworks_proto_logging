@@ -2836,4 +2836,9 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     ACCESSIBILITY_SHORTCUTS_SETTINGS = 1864;
+
+    // Open: Settings > Notifications > notification listeners > a listener > bridged apps
+    // CATEGORY: SETTINGS
+    // OS: S
+    NOTIFICATION_ACCESS_BRIDGED_APPS = 1865;
 }
