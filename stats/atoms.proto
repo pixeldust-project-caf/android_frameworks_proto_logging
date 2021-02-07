@@ -522,6 +522,7 @@ message Atom {
         DeviceRotated device_rotated = 333 [(module) = "framework"];
         SimSpecificSettingsRestored sim_specific_settings_restored = 334
             [(module) = "telephony"];
+        TextClassifierDownloadReported text_classifier_download_reported = 335 [(module) = "textclassifier"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -12750,6 +12751,58 @@ message TextClassifierApiUsageReported {
     optional ResultType result_type = 2;
     optional int64 latency_millis = 3;
     optional string session_id = 4;
+}
+
+/**
+ * Logs when TextClassifier Model Downloader schedule/finish a task.
+ *
+ * Logged from: external/libtextclassifier/java/
+ */
+message TextClassifierDownloadReported {
+    // The model type to download
+    enum ModelType {
+        UNKNOWN_MODEL_TYPE = 0;
+        ANNOTATOR = 1;
+        LANG_ID = 2;
+        ACTIONS_SUGGESTIONS = 3;
+    }
+    optional ModelType model_type = 1;
+    // The file type to download
+    enum FileType {
+        UNKNOWN_FILE_TYPE = 0;
+        MANIFEST = 1;
+        MODEL = 2;
+    }
+    optional FileType file_type = 2;
+    // The status of the download
+    enum DownloadStatus {
+        UNKNOWN_STATUS = 0;
+        SCHEDULED = 1;
+        SUCCEEDED = 2;
+        FAILED_AND_RETRY = 3;
+        FAILED_AND_ABORT = 4;
+    }
+    optional DownloadStatus download_status = 3;
+    // The suffix of the url (without namespace) to download from, which contains model version and
+    // locale info (e.g. 'r/v803/en.fb'). We use this to uniquely identify a model/manifest file.
+    optional string url_suffix = 4;
+    // Failure reason, only set if this is for a failure status
+    enum FailureReason {
+        UNKNOWN_FAILURE_REASON = 0;
+        FAILED_TO_SCHEDULE = 1;
+        FAILED_TO_DOWNLOAD_SERVICE_CONN_BROKEN = 2;
+        FAILED_TO_DOWNLOAD_404_ERROR = 3;
+        FAILED_TO_DOWNLOAD_OTHER = 4;
+        DOWNLOADED_FILE_MISSING = 5;
+        FAILED_TO_PARSE_MANIFEST = 6;
+        FAILED_TO_VALIDATE_MODEL = 7;
+        FAILED_TO_MOVE_MODEL = 8;
+        WORKER_STOPPED = 9;
+    }
+    optional FailureReason failure_reason = 5;
+    // How many attempts we have tried for the same task at a terminal status (i.e. SUCCEEDED or
+    // FAILED_AND_ABORT).
+    optional int32 run_attempt_count = 6;
 }
 
 /**
