@@ -2831,4 +2831,19 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     ACCESSIBILITY_AUDIO_ADJUSTMENT = 1863;
+
+    // OPEN: Settings > Accessibility -> Accessibility shortcuts
+    // CATEGORY: SETTINGS
+    // OS: S
+    ACCESSIBILITY_SHORTCUTS_SETTINGS = 1864;
+
+    // Open: Settings > Notifications > notification listeners > a listener > bridged apps
+    // CATEGORY: SETTINGS
+    // OS: S
+    NOTIFICATION_ACCESS_BRIDGED_APPS = 1865;
+
+    // OPEN: Settings > Accessibility -> Text and display > Turn screen darker
+    // CATEGORY: SETTINGS
+    // OS: S
+    ACCESSIBILITY_TURN_SCREEN_DARKER = 1866;
 }
