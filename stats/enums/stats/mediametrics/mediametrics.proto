@@ -166,7 +166,7 @@ message CodecData {
  * Logged from:
  *   frameworks/av/media/libstagefright/RemoteMediaExtractor.cpp
  *   frameworks/av/services/mediaanalytics/statsd_extractor.cpp
- * Next Tag: 5
+ * Next Tag: 6
  */
 message ExtractorData {
     optional string format = 1;
@@ -183,6 +183,7 @@ message ExtractorData {
     }
 
     optional EntryPoint entry_point = 4 [default = UNSET];
+    optional string playback_id = 5;
 }
 
 /**
@@ -192,7 +193,7 @@ message ExtractorData {
  *   frameworks/av/media/libmediaplayerservice/nuplayer/NuPlayerDriver.cpp
  *   frameworks/av/media/libmediaplayer2/nuplayer2/NuPlayer2Driver.cpp
  *   frameworks/av/services/mediaanalytics/statsd_nuplayer.cpp
- * Next Tag: 21
+ * Next Tag: 22
  */
 message NuPlayerData {
     optional string whichPlayer = 1;
@@ -216,6 +217,7 @@ message NuPlayerData {
     optional int32 rebuffers = 18;
     optional int32 rebuffer_at_exit = 19;
     optional int64 frames_dropped_startup = 20;
+    optional string playback_id = 21;
 }
 
 /**
