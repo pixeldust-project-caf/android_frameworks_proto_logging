@@ -4570,6 +4570,17 @@ message BinaryPushStateChanged {
         // (e.g. soft restart, notification restart).
         NO_REBOOT_PROMOTION_STRATEGY_ELIGIBLE = 30;
         REBOOT_TRIGGER_FAILURE = 31;
+        // Logged after INSTALL_REQUESTED for devices installing a train which
+        // requires reboot and eligible for resume on reboot.
+        RESUME_ON_REBOOT_ELIGIBLE = 32;
+        // Logged when Phonesky trys to prepare RoR.
+        RESUME_ON_REBOOT_PREPARATION_INITITATED = 33;
+        // Logged when RoR preparation succeeded.
+        RESUME_ON_REBOOT_PREPARATION_SUCCESS = 34;
+        // Logged when RoR preparation failed.
+        RESUME_ON_REBOOT_PREPARATION_FAILURE = 35;
+        // Logged when Phonesky cannot schedule RoR job on a RoR eligible device.
+        ROR_JOB_NOT_SCHEDULE = 36;
     }
     optional State state = 6;
     // Possible experiment ids for monitoring this push.
