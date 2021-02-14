@@ -13299,6 +13299,7 @@ message ImsServiceEntitlementUpdated {
 
 // Indicates which compile filter was used for the package being loaded in an ART session.
 enum ArtCompileFilter {
+    ART_COMPILATION_FILTER_UNSPECIFIED = 0;
     ART_COMPILATION_FILTER_ERROR = 1;
     ART_COMPILATION_FILTER_UNKNOWN = 2;
     ART_COMPILATION_FILTER_ASSUMED_VERIFIED = 3;
@@ -13317,6 +13318,7 @@ enum ArtCompileFilter {
 }
 
 enum ArtCompilationReason {
+    ART_COMPILATION_REASON_UNSPECIFIED = 0;
     ART_COMPILATION_REASON_ERROR = 1;
     ART_COMPILATION_REASON_UNKNOWN = 2;
     ART_COMPILATION_REASON_FIRST_BOOT = 3;
@@ -13331,6 +13333,7 @@ enum ArtCompilationReason {
 
 // Indicates which kind of measurement ART is reporting.
 enum ArtDatumId {
+    ART_DATUM_INVALID = 0;
     ART_DATUM_GC_MUTATOR_PAUSE_TIME = 1;
     ART_DATUM_GC_YOUNG_GENERATION_COLLECTION_TIME = 2;
     ART_DATUM_GC_YOUNG_GENERATION_COLLECTION_COUNT = 3;
@@ -13344,6 +13347,7 @@ enum ArtDatumId {
 
 // Indicates what class of thread the reported values apply to.
 enum ArtThreadType {
+    ART_THREAD_UNKNOWN = 0;
     ART_THREAD_MAIN = 1;
     ART_THREAD_BACKGROUND = 2;
 }
