@@ -522,6 +522,9 @@ message Atom {
         DeviceRotated device_rotated = 333 [(module) = "framework"];
         SimSpecificSettingsRestored sim_specific_settings_restored = 334
             [(module) = "telephony"];
+        PinStorageEvent pin_storage_event = 336 [(module) = "telephony"];
+        BluetoothHALCrashReasonReported bluetooth_hal_crash_reason_reported =
+            338 [(module) = "bluetooth"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -3012,6 +3015,41 @@ message BluetoothClassOfDeviceReported {
 }
 
 /**
+ * Logs when there is a crash in hardware abstraction layer (HAL)
+ *
+ * Logged from:
+ *   system/bt
+ *
+ */
+message BluetoothHALCrashReasonReported {
+    // An identifier that can be used to match events for this device.
+    // The incremental identifier is locally generated and guaranteed not derived
+    // from any globally unique hardware id.
+    // For paired devices, it stays consistent between Bluetooth toggling for the
+    // same remote device.
+    // For unpaired devices, it stays consistent within the same Bluetooth adapter
+    // session for the same remote device.
+    // Default: 0 if the device's metric id is unknown.
+    optional int32 metric_id = 1;
+    // An identifier that can be used to match events for this device.
+    // Currently, this is a salted hash of the MAC address of this Bluetooth device.
+    // Salt: Randomly generated 256 bit value
+    // Hash algorithm: HMAC-SHA256
+    // Size: 32 byte
+    // Default: null or empty if the device identifier is not known
+    optional bytes obfuscated_id = 2 [(android.os.statsd.log_mode) = MODE_BYTES];
+    // Bluetooth HAL crash reason error code.
+    // Original type: uint8_t
+    // Default: 0x00 (DEFAULT)
+    optional int32 error_code = 3;
+    // Bluetooth HAL crash reason vendor error code.
+    // Original type: uint8_t
+    // Default: 0x00 (DEFAULT)
+    optional int32 vendor_error_code = 4;
+}
+
+
+/**
  * Logs when something is plugged into or removed from the USB-C connector.
  *
  * Logged from:
@@ -5270,6 +5308,12 @@ message SnapshotMergeReported {
     // containing the dm-snapshot's copy-on-write data generated during a
     // Virtual A/B update.
     optional int64 cow_file_size_bytes = 5;
+
+    // Whether the device enables Virtual A/B compression.
+    optional bool vab_compression_enabled = 6;
+
+    // Whether this update attempt uses Virtual A/B compression.
+    optional bool vab_compression_used = 7;
 }
 
 /**
@@ -8885,6 +8929,16 @@ message SystemMemory {
     // Can overlap with ion memory.
     // Reported from os.Debug.getGpuTotalUsageKb (S+)
     optional int32 gpu_total_usage_kb = 7;
+
+    // GPU kernel driver private allocations.
+    // Does not overlap with ion memory
+    // Computed as total usage - Debug.getGpuDmaBufUsageKb()
+    // Only available on supported kernel versions (5.4+)
+    optional int32 gpu_private_usage_kb = 8;
+
+    // Total DMABUF memory allocations
+    // Reported from os.Debug.getDmabufTotalExportedKb (S+)
+    optional int32 dmabuf_total_exported_kb = 9;
 }
 
 /**
@@ -9440,6 +9494,13 @@ message GrantPermissionsActivityButtonActions {
 
     // id which identifies single session of user interacting with permission controller
     optional int64 session_id = 6;
+
+    // Target SDK of the package
+    optional int32 target_sdk = 7;
+
+    // Selected precision of the location permission - bit flags indicate which
+    // locations were chosen
+    optional int32 selected_precision = 8;
 }
 
 /**
@@ -9891,6 +9952,12 @@ message UpdateEngineUpdateAttemptReported {
 
     // Free space available in the super partition.
     optional int64 super_free_space_bytes = 11;
+
+    // Whether the device enables Virtual A/B compression.
+    optional bool vab_compression_enabled = 12;
+
+    // Whether this update attempt uses Virtual A/B compression.
+    optional bool vab_compression_used = 13;
 }
 
 /**
@@ -11509,6 +11576,12 @@ message DataStallRecoveryReported {
     // See GeranBands, UtranBands and EutranBands in IRadio interface, depending
     // on the RAT used at the time.
     optional int32 band = 7;
+
+    // Whether the data stall is recovered.
+    optional bool recovered = 8;
+
+    // The elapsed time between start of the data stall and result of current action.
+    optional int32 duration_millis = 9;
 }
 
 /**
@@ -11586,6 +11659,31 @@ message ImsRegistrationStats {
     optional int32 video_available_seconds = 10;
     optional int32 ut_capable_seconds = 11;
     optional int32 ut_available_seconds = 12;
+}
+
+/*
+ * Logs information related to PIN storage and automatic PIN operations.
+ *
+ * Logged from:
+ *   frameworks/opt/telephony/src/java/com/android/internal/telephony/uicc/PinStorage.java
+ */
+message PinStorageEvent {
+    // The type of event.
+    enum Event {
+        UNKNOWN = 0;
+        // The PIN was verified automatically successfully.
+        PIN_VERIFICATION_SUCCESS = 1;
+        // The PIN was verified automatically unsuccessfully.
+        PIN_VERIFICATION_FAILURE = 2;
+        // The PIN was cached, but discarded after reboot.
+        CACHED_PIN_DISCARDED = 3;
+        // The PIN was stored to be used after OTA reboot.
+        PIN_STORED_FOR_VERIFICATION = 4;
+    }
+    optional Event event = 1;
+
+    // Number of PINs stored or discarded.
+    optional int32 number_of_pins = 2;
 }
 
 /**
