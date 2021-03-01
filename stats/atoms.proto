@@ -543,6 +543,7 @@ message Atom {
         AppSearchCallStatsReported app_search_call_stats_reported = 347 [(module) = "framework"];
         AppSearchPutDocumentStatsReported app_search_put_document_stats_reported = 348 [(module) = "framework"];
         DeviceControlChanged device_control_changed = 349 [(module) = "sysui"];
+        DeviceStateChanged device_state_changed = 350 [(module) = "framework"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -14074,4 +14075,15 @@ message DeviceControlChanged {
     optional int32 uid = 4 [(is_uid) = true];
     // Is the device locked while the action started
     optional bool is_locked = 5;
+}
+
+/*
+ * Logged when hardware based user-configurable device state changes.
+ *
+ * Logged from:
+ *     frameworks/base/services/core/java/com/android/server/devicestate/DeviceStateManagerService.java
+ */
+message DeviceStateChanged {
+    optional int64 new_device_state = 1;
+    optional bool boot_state = 2;
 }
