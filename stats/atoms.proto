@@ -523,8 +523,17 @@ message Atom {
         SimSpecificSettingsRestored sim_specific_settings_restored = 334
             [(module) = "telephony"];
         PinStorageEvent pin_storage_event = 336 [(module) = "telephony"];
+        FaceDownReported face_down_reported = 337 [(module) = "framework"];
         BluetoothHALCrashReasonReported bluetooth_hal_crash_reason_reported =
             338 [(module) = "bluetooth"];
+        RebootEscrowPreparationReported reboot_escrow_preparation_reported =
+            339 [(module) = "framework"];
+        RebootEscrowLskfCaptureReported reboot_escrow_lskf_capture_reported =
+            340 [(module) = "framework"];
+        RebootEscrowRebootReported reboot_escrow_reboot_reported = 341 [(module) = "framework"];
+        MediametricsAAudioStreamReported mediametrics_aaudiostream_reported = 343;
+        MediaTranscodingSessionEnded media_transcoding_session_ended = 344
+            [(module) = "media"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -746,6 +755,14 @@ message TranscodingData {
         APP_EXTRA = 5;   // ApplicationMediaCapabilities API in open()
     }
 
+    // Causes that leads to the failure of transcode.
+    enum FailureCause {
+        CAUSE_UNKNOWN = 0;
+        TRANSCODING_SERVICE_ERROR = 1;     // Error from transcoding service.
+        TRANSCODING_CLIENT_TIMEOUT = 2;    // Timeout from MediaProvider.
+        TRANSCODING_SESSOION_CANCELED = 3; // MediaProvider cancels the transcode.
+    }
+
     enum AccessType {
         HEVC_WRITE = 1;
         READ_DIRECT = 2;
@@ -769,6 +786,10 @@ message TranscodingData {
     optional int64 file_duration_millis = 6; // The duration of the video file.
     optional int64 file_framerate_fps = 7; // The framerate of the video file.
     optional AccessReason access_reason = 8;
+    optional int64 width = 9;
+    optional int64 height = 10;
+    optional bool hit_anr = 11;
+    optional FailureCause failure_cause = 12;   // This field is valid only when fails.
 }
 
 /**
@@ -5766,6 +5787,9 @@ message CpuCyclesPerThreadGroupCluster {
 
         // All system server threads.
         SYSTEM_SERVER = 2;
+
+        // All surface flinger threads.
+        SURFACE_FLINGER = 3;
     }
     optional ThreadGroup thread_group = 1;
 
@@ -8479,6 +8503,11 @@ message MediametricsAudiorecordReported {
     optional int64 media_apex_version = 4;
 
     optional android.stats.mediametrics.AudioRecordData audiorecord_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
+
+    // Android S
+    // Metric log session id, a Base64Url encoded string of a randomly generated 128-bit integer.
+    // An empty string means no session id is set.
+    optional string log_session_id = 6;
 }
 
 /**
@@ -8509,6 +8538,11 @@ message MediametricsAudiotrackReported {
     optional int64 media_apex_version = 4;
 
     optional android.stats.mediametrics.AudioTrackData audiotrack_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
+
+    // Android S
+    // Metric log session id, a Base64Url encoded string of a randomly generated 128-bit integer.
+    // An empty string means no session id is set.
+    optional string log_session_id = 6;
 }
 
 /**
@@ -9992,6 +10026,76 @@ message UpdateEngineSuccessfulUpdateReported {
 }
 
 /**
+ * Reported when a client requests to prepare for resume on reboot.
+ *
+ * Logged from:
+ *   frameworks/base/services/core/java/com/android/server/recoverysystem/RecoverySystemService.java
+ */
+message RebootEscrowPreparationReported {
+  enum Result {
+    ROR_NEED_PREPARATION = 0;
+    ROR_SKIP_PREPARATION_AND_NOTIFY = 1;
+    ROR_SKIP_PREPARATION_NOT_NOTIFY = 2;
+  }
+
+  // The uid of the client who requests ror.
+  optional int32 requesting_uid = 1 [(is_uid) = true];
+
+  optional Result result = 2;
+
+  // The number of clients who has requested ror, including the current caller.
+  optional int32 requested_client_count = 3;
+}
+
+/**
+ * Reported when the lock screen knowledge factor is captured, while there are clients of
+ * resume on reboot to notify.
+ *
+ * Logged from:
+ *   frameworks/base/services/core/java/com/android/server/recoverysystem/RecoverySystemService.java
+ */
+message RebootEscrowLskfCaptureReported {
+  // The uid of the client to notify about the Lskf capture.
+  optional int32 uid_to_notify = 1 [(is_uid) = true];
+
+  // The total number of clients who have requested ror.
+  optional int32 requested_client_count = 2;
+
+  // The duration between RoR request - current LSKF capture event.
+  optional int32 duration_ror_requested_to_lskf_captured_seconds = 3;
+}
+
+/* Reported when a client (e.g. gmscore) requests to reboot with Resume on Reboot.
+ *
+ * Logged from:
+ *   frameworks/base/services/core/java/com/android/server/recoverysystem/RecoverySystemService.java
+ */
+message RebootEscrowRebootReported {
+  optional int32 error_code = 1;
+
+  // The uid of clients who requested the reboot
+  optional int32 request_uid = 2;
+
+  // All clients that have prepared for RoR before this reboot
+  optional int32 prepared_clients_count = 3;
+
+  // The RoR request count for the client who requests reboot.
+  optional int32 request_count = 4;
+
+  // Whether the reboot request assumes a slot switch on a/b devices.
+  optional bool slot_switch = 5;
+
+  // True if the DeviceConfig shows the device is using server based RoR.
+  optional bool server_based = 6;
+
+  // The duration between last LSKF captured - reboot requests
+  optional int32 duration_lskf_captured_to_reboot_seconds = 7;
+
+  // The count of LSKF captured since preparation
+  optional int32 lskf_captured_counts = 8;
+}
+
+/**
  * Reported when the RebootEscrow HAL has attempted to recover the escrowed
  * key to indicate whether it was successful or not.
  *
@@ -9999,7 +10103,37 @@ message UpdateEngineSuccessfulUpdateReported {
  *   frameworks/base/services/core/java/com/android/server/locksettings/RebootEscrowManager.java
  */
 message RebootEscrowRecoveryReported {
+    // Type of the resume on reboot backend provider.
+    enum ServiceType {
+        UNKNOWN = 0;
+        HAL = 1;
+        SERVER_BASED = 2;
+    }
+
+    // Whether the vbmeta digest of the current slot matches a precomputed value before reboot.
+    enum VbmetaDigestStatus {
+        MATCH_EXPECTED_SLOT = 0;
+        MATCH_FALLBACK_SLOT = 1;
+        MISMATCH = 2;
+    }
+
     optional bool successful = 1;
+    // The error code for escrow data recovery failure
+    optional int32 error_code = 2;
+
+    optional ServiceType type = 3;
+
+    // Number of retries to unwrap the escrow key asynchronously.
+    optional int32 get_escrow_key_retry_count = 4;
+
+    // The duration between storing of reboot escrow key ->
+    // use of reboot escrow key to unlock CE after reboot
+    optional int32 duration_escrow_key_storage_to_unlock_seconds = 5;
+
+    optional VbmetaDigestStatus vbmeta_digest_status = 6;
+
+    // The duration between boot complete -> CE unlock
+    optional int32 duration_boot_complete_to_unlock_seconds = 7;
 }
 
 /**
@@ -10875,10 +11009,10 @@ message TifTuneStateChanged {
     // The id of this TV Input, only unique to a given TV Input Service.
     // This is specifically NOT android.media.tv.TvInputInfo.getId()
     // which is a string that contains the package name of its TvInputService.
-    optional int32 inputId = 5  [(state_field_option).primary_field = true];
+    optional int32 input_id = 5  [(state_field_option).primary_field = true];
     // The HDMI port id
     // Only valid when type == HDMI
-    optional int32 hdmiPort = 6  [(state_field_option).primary_field = true];
+    optional int32 hdmi_port = 6  [(state_field_option).primary_field = true];
 }
 
 /**
@@ -11677,13 +11811,51 @@ message PinStorageEvent {
         PIN_VERIFICATION_FAILURE = 2;
         // The PIN was cached, but discarded after reboot.
         CACHED_PIN_DISCARDED = 3;
-        // The PIN was stored to be used after OTA reboot.
+        // The PIN was stored to be used after unattended reboot.
         PIN_STORED_FOR_VERIFICATION = 4;
+        // The PIN is not available for storage and will be required after unattended reboot.
+        PIN_REQUIRED_AFTER_REBOOT = 5;
+        // The PIN was not verified automatically because the SIM card did not match.
+        PIN_VERIFICATION_SKIPPED_SIM_CARD_MISMATCH = 6;
     }
     optional Event event = 1;
 
     // Number of PINs stored or discarded.
     optional int32 number_of_pins = 2;
+}
+
+/**
+ * Logs flip to screen off events.
+ *
+ * Logged from:
+ *   frameworks/opt/telephony/src/java/com/android/server/power/FaceDownDetector.java
+ */
+message FaceDownReported {
+    enum Response{
+        UNKNOWN = 1;
+        // The phone was flipped before the screen turns off.
+        UNFLIP = 2;
+        // User interacts with the screen after a face down is detected.
+        USER_INTERACTION = 3;
+        // A flip leads to screen turning off. This is the expected outcome.
+        SCREEN_OFF = 4;
+    }
+
+    // Logs the action that occurs from a flip event, whether by user or system
+    // action.
+    optional Response face_down_response = 1;
+
+    // After a flip is detected, how long until a system or user action occurs.
+    optional int64 millis_since_flip = 2;
+
+    // Difference between the flip time and when the timeout would otherwise
+    // occur.
+    optional int64 millis_until_normal_timeout = 3;
+
+    // How quickly the user turns the screen back on after a flip event.
+    // A low value may indicate a false negative. Logged only when Response is
+    // SCREEN_OFF.
+    optional int64 millis_until_next_screen_on = 4;
 }
 
 /**
@@ -12308,6 +12480,11 @@ message MediametricsAudioRecordDeviceUsageReported {
     // The audio source for AudioRecord.
     // An enumeration from system/media/audio/include/system/audio-base.h audio_source_t
     optional string source = 12;
+
+    // Android S
+    // Metric log session id, a Base64Url encoded string of a randomly generated 128-bit integer.
+    // An empty string means no session id is set.
+    optional string log_session_id = 13;
 }
 
 /**
@@ -12448,6 +12625,11 @@ message MediametricsAudioTrackDeviceUsageReported {
     // Only "static" is supported for R.
     // See lookup<TRACK_TRAITS>() in frameworks/av/services/mediametrics/AudioTypes.cpp
     optional string traits = 19;
+
+    // Android S
+    // Metric log session id, a Base64Url encoded string of a randomly generated 128-bit integer.
+    // An empty string means no session id is set.
+    optional string log_session_id = 20;
 }
 
 /**
@@ -13316,6 +13498,12 @@ enum ArtCompilationReason {
     ART_COMPILATION_REASON_INACTIVE = 8;
     ART_COMPILATION_REASON_SHARED = 9;
     ART_COMPILATION_REASON_INSTALL_WITH_DEX_METADATA = 10;
+    ART_COMPILATION_REASON_POST_BOOT = 11;
+    ART_COMPILATION_REASON_INSTALL_FAST = 12;
+    ART_COMPILATION_REASON_INSTALL_BULK = 13;
+    ART_COMPILATION_REASON_INSTALL_BULK_SECONDARY = 14;
+    ART_COMPILATION_REASON_INSTALL_BULK_DOWNGRADED = 15;
+    ART_COMPILATION_REASON_INSTALL_BULK_SECONDARY_DOWNGRADED = 16;
 }
 
 // Indicates which kind of measurement ART is reporting.
@@ -13329,12 +13517,30 @@ enum ArtDatumId {
     ART_DATUM_AOT_COMPILE_TIME = 7;
     ART_DATUM_CLASS_VERIFICATION_TIME = 8;
     ART_DATUM_CLASS_LOADING_TIME = 9;
+
+    // Metrics IDs for dex2oat.
+    ART_DATUM_DEX2OAT_RESULT_CODE = 10;
+    ART_DATUM_DEX2OAT_DEX_CODE_BYTES = 11;
+    ART_DATUM_DEX2OAT_TOTAL_TIME = 12;
+    ART_DATUM_DEX2OAT_VERIFY_DEX_FILE_TIME = 13;
+    ART_DATUM_DEX2OAT_FAST_VERIFY_TIME = 14;
+    ART_DATUM_DEX2OAT_RESOLVE_METHODS_AND_FIELDS_TIME = 15;
 }
 
 // Indicates what class of thread the reported values apply to.
 enum ArtThreadType {
     ART_THREAD_MAIN = 1;
     ART_THREAD_BACKGROUND = 2;
+}
+
+// Indicates the type of dex metadata.
+enum ArtDexMetadataType {
+    UNKNOWN_DEX_METADATA = 0;
+    PROFILE = 1;
+    VDEX = 2;
+    PROFILE_AND_VDEX = 3;
+    NONE_DEX_METADATA = 4;
+    ERROR_DEX_METADATA = 5;
 }
 
 message ArtDatumReported {
@@ -13361,6 +13567,9 @@ message ArtDatumReported {
 
     // The value of the counter.
     optional int64 value = 8;
+
+    // The type of dex metadata
+    optional ArtDexMetadataType dex_metadata_type = 9;
 }
 
 /**
@@ -13378,4 +13587,174 @@ message SimSpecificSettingsRestored {
     // Indicates which criteria was used to match the inserted SIM to backed up
     // SIM. Only relevant when result is SUCCESS
     optional android.telephony.SimSpecificSettingsRestoreMatchingCriteria matching_criteria = 3;
+}
+
+/**
+ * Log audio device types that are used for input/output.
+ * Next Tag: 2
+ */
+message AudioDevice {
+    // See audio_devices_t in system/media/audio/include/system/audio-hal-enums.h
+    repeated int32 type = 1;
+}
+
+/**
+ * Track information about AAudio Stream
+ * Logged from
+ *   frameworks/av/services/mediametrics/AudioAnalytics.cpp
+ */
+message MediametricsAAudioStreamReported {
+    // The caller name of the aaudio stream
+    // See lookup<CALLER_NAME>() in frameworks/av/services/mediametrics/AudioTypes.cpp
+    enum CallerName {
+        CALLER_NAME_UNKNOWN = 0;
+        CALLER_NAME_AAUDIO = 1;
+        CALLER_NAME_JAVA = 2;
+        CALLER_NAME_MEDIA = 3;
+        CALLER_NAME_OPENSLES = 4;
+        CALLER_NAME_RTP = 5;
+        CALLER_NAME_SOUND_POOL = 6;
+        CALLER_NAME_TONE_GENERATOR = 7;
+    }
+    optional CallerName caller_name = 1;
+
+    // The implementation of aaudio.
+    enum CallerPath {
+        CALLER_PATH_UNKNOWN = 0;
+        CALLER_PATH_LEGACY = 1;
+        CALLER_PATH_MMAP = 2;
+    }
+    optional CallerPath path = 2;
+
+    // The direction of the stream.
+    // See aaudio_direction_t in frameworks/av/media/libaaudio/include/aaudio/AAudio.h
+    enum Direction {
+        // The direction is unknown.
+        DIRECTION_UNKNOWN = -1;
+        // Audio data will travel out of the device.
+        DIRECTION_OUTPUT = 0;
+        // Audio data will travel into the device.
+        DIRECTION_INPUT = 1;
+    }
+    optional Direction direction = 3;
+
+    // The amount read or written in one shot by the Mixer or DSP.
+    optional int32 frames_per_burst = 4;
+    // The number of frames that the buffer is used.
+    optional int32 buffer_size = 5;
+    // The allocated number of frames for the buffer.
+    optional int32 buffer_capacity = 6;
+    // The channel count of the aaudio stream.
+    optional int32 channel_count = 7;
+    // Total frames transferred (written or read)
+    optional int64 total_frames_transferred = 8;
+
+    // The performance mode.
+    // See aaudio_performance_mode_t in frameworks/av/media/libaaudio/include/aaudio/AAudio.h
+    enum PerformanceMode {
+        // The performance mode is unknown.
+        PERFORMANCE_MODE_UNKNOWN = -1;
+        // No particular performance mode needs. Default.
+        PERFORMANCE_MODE_NONE = 10;
+        // Extending battery life is more important than low latency.
+        PERFORMANCE_MODE_POWER_SAVING = 11;
+        // Reducing latency is more important than battery life.
+        PERFORMANCE_MODE_LOW_LATENCY = 12;
+    }
+    // The performance mode requested by the applications.
+    optional PerformanceMode perf_mode_requested = 9;
+    // The actual performance mode used by aaudio.
+    optional PerformanceMode perf_mode_actual = 10;
+
+    // The mode requested for sharing the device
+    // See aaudio_sharing_mode_t in frameworks/av/media/libaaudio/include/aaudio/AAudio.h
+    enum SharingMode {
+        // The sharing mode is unknown
+        SHARING_MODE_UNKNOWN = -1;
+        // This will be the only stream using a particular source or sink.
+        SHARING_MODE_EXCLUSIVE = 0;
+        // Multiple application will be mixed by the AAudio server.
+        SHARING_MODE_SHARED = 1;
+    }
+    optional SharingMode sharing = 11;
+
+    // Approximate number of glitches.
+    // Underrun on output stream. Overrun on input stream.
+    optional int32 xrun_count = 12;
+    // Devices that are used by the aaudio stream.
+    optional AudioDevice types = 13 [(log_mode) = MODE_BYTES];
+
+    // Format request by the applications
+    optional int32 format_app = 14;
+    // Format processed by the framework
+    optional int32 format_device = 15;
+
+    // Android S metric log session id, a Base64Url encoded string representing a 128-bit integer.
+    optional string log_session_id = 16;
+}
+
+/**
+ * Logs media transcoding session ended events.
+ *
+ * Logged from:
+ *   frameworks/av/media/libmediatranscoding/TranscoderWrapper.cpp
+ */
+message MediaTranscodingSessionEnded {
+
+    enum Reason {
+        UNKNOWN = 0;       // Unused.
+        FINISHED = 1;      // Transcoding session finished successfully.
+        ERROR = 2;         // Transcoding session returned error while running.
+        PAUSED = 3;        // Transcoding session was paused, potentially failed.
+        CANCELLED = 4;     // Transcoding session was cancelled.
+        START_FAILED = 5;  // Transcoding session failed to start.
+        RESUME_FAILED = 6; // Transcoding session failed to resume.
+        CREATE_FAILED = 7; // Transcoder instance failed to crate.
+        CONFIG_SRC_FAILED = 8;    // Configure source failed.
+        CONFIG_DST_FAILED = 9;    // Configure destination failed.
+        CONFIG_TRACK_FAILED = 10; // Configure track failed.
+        OPEN_SRC_FD_FAILED = 11;  // Open source fd failed.
+        OPEN_DST_FD_FAILED = 12;  // Open destination fd failed.
+        NO_TRACKS = 13;  // No tracks in source file.
+    }
+
+    // Reason for logging the atom.
+    optional Reason reason = 1;
+
+    // UID of client connecting to media transcoding service.
+    optional int32 calling_uid = 2 [(is_uid) = true];
+
+    // Transcode session status flag (media_status_t).
+    optional int32 transcode_status = 3;
+
+    // Transcode speed as framerate, if status is success.
+    optional int32 transcode_fps = 4;
+
+    // Source video dimensions.
+    optional int32 src_width = 5;
+    optional int32 src_height = 6;
+
+    // Source video codec information.
+    optional string src_codec_type = 7;
+    optional int32 src_profile = 8;
+    optional int32 src_level = 9;
+
+    // Source video framerate.
+    optional int32 src_fps = 10;
+
+    // Source video duration.
+    optional int32 src_duration_millis = 11;
+
+    // Whether source video is HDR.
+    optional bool src_is_hdr = 12;
+
+    // Destination video dimensions.
+    optional int32 dst_width = 13;
+    optional int32 dst_height = 14;
+
+    // Destination video codec information.
+    optional string dst_codec_type = 15;
+
+    // Whether destination video is HDR.
+    optional bool dst_is_hdr = 16;
 }
