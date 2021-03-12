@@ -184,6 +184,7 @@ message ExtractorData {
     }
 
     optional EntryPoint entry_point = 4 [default = UNSET];
+    // TODO: change to log_session_id
     optional string playback_id = 5;
 }
 
@@ -218,6 +219,7 @@ message NuPlayerData {
     optional int32 rebuffers = 18;
     optional int32 rebuffer_at_exit = 19;
     optional int64 frames_dropped_startup = 20;
+    // TODO: change to log_session_id
     optional string playback_id = 21;
 }
 
