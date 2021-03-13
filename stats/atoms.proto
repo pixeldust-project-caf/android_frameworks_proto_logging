@@ -542,6 +542,7 @@ message Atom {
             346 [(module) = "framework"];
         AppSearchCallStatsReported app_search_call_stats_reported = 347 [(module) = "framework"];
         AppSearchPutDocumentStatsReported app_search_put_document_stats_reported = 348 [(module) = "framework"];
+        DeviceControlChanged device_control_changed = 349 [(module) = "sysui"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -3745,7 +3746,11 @@ message AppCrashOccurred {
 
     optional android.server.ErrorSource error_source = 8;
 
-    optional bool is_package_loading = 9;
+    optional bool is_incremental = 9;
+
+    optional float loading_progress = 10;
+
+    optional int64 millis_since_oldest_pending_read = 11;
 }
 
 /**
@@ -3808,7 +3813,11 @@ message ANROccurred {
 
     optional string package_name = 8;
 
-    optional bool is_package_loading = 9;
+    optional bool is_incremental = 9;
+
+    optional float loading_progress = 10;
+
+    optional int64 millis_since_oldest_pending_read = 11;
 }
 
 /**
@@ -9492,6 +9501,9 @@ message LocationManagerApiUsageReported {
     // Activity Importance of API caller.
     // Categorized to 3 types that are interesting from location's perspective.
     optional android.stats.location.ActivityImportance activiy_importance = 12;
+
+    // Attribution tag passed to this API.
+    optional string attribution_tag = 13;
 }
 
 /**
@@ -14043,4 +14055,23 @@ message MagnificationModeWithImeOnReported {
     // The definition of the magnification mode.
     // From frameworks/base/core/proto/android/stats/accessibility/accessibility_enums.proto.
     optional android.stats.accessibility.MagnificationMode activated_mode = 1;
+}
+
+/*
+ * Reports a device controls user interaction
+ *
+ * Logged from:
+ *   frameworks/base/packages/SystemUI/src/com/android/systemui/controls/ControlsMetricsLoggerImpl.kt
+ */
+message DeviceControlChanged {
+    // The event_id
+    optional int32 event_id = 1;
+    // An identifier to tie together multiple logs relating to the same controls session
+    optional int32 instance_id = 2;
+    // The type of device the user has interacted with (android.service.controls.DeviceTypes)
+    optional int32 device_type = 3;
+    // The service app uid.
+    optional int32 uid = 4 [(is_uid) = true];
+    // Is the device locked while the action started
+    optional bool is_locked = 5;
 }
