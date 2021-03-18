@@ -772,7 +772,7 @@ message TranscodingData {
         CAUSE_UNKNOWN = 0;
         TRANSCODING_SERVICE_ERROR = 1;     // Error from transcoding service.
         TRANSCODING_CLIENT_TIMEOUT = 2;    // Timeout from MediaProvider.
-        TRANSCODING_SESSION_CANCELED = 3; // MediaProvider cancels the transcode.
+        TRANSCODING_SESSOION_CANCELED = 3; // MediaProvider cancels the transcode.
     }
 
     enum AccessType {
@@ -11096,7 +11096,6 @@ message CellBroadcastMessageFiltered {
         DUPLICATE_MESSAGE = 1;
         GEOFENCED_MESSAGE = 2;
         AREA_INFO_MESSAGE = 3;
-        DISABLED_BY_OEM = 4;
     }
 
     // GSM, CDMA, CDMA-SCP
@@ -13757,12 +13756,12 @@ enum ArtThreadType {
 
 // Indicates the type of dex metadata.
 enum ArtDexMetadataType {
-  ART_DEX_METADATA_TYPE_UNKNOWN = 0;
-  ART_DEX_METADATA_TYPE_PROFILE = 1;
-  ART_DEX_METADATA_TYPE_VDEX = 2;
-  ART_DEX_METADATA_TYPE_PROFILE_AND_VDEX = 3;
-  ART_DEX_METADATA_TYPE_NONE = 4;
-  ART_DEX_METADATA_TYPE_ERROR = 5;
+    UNKNOWN_DEX_METADATA = 0;
+    PROFILE = 1;
+    VDEX = 2;
+    PROFILE_AND_VDEX = 3;
+    NONE_DEX_METADATA = 4;
+    ERROR_DEX_METADATA = 5;
 }
 
 message ArtDatumReported {
