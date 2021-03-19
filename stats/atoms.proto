@@ -34,14 +34,14 @@ import "frameworks/proto_logging/stats/enums/bluetooth/smp/enums.proto";
 import "frameworks/proto_logging/stats/enums/debug/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/biometrics/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/sensor/assist/enums.proto";
-import "frameworks/proto_logging/stats/enums/net/networkcapabilities.proto";
+import "frameworks/proto_logging/stats/enums/net/enums.proto";
 import "frameworks/proto_logging/stats/enums/os/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/connectivity/data_stall_event.proto";
 import "frameworks/proto_logging/stats/enums/server/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/job/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/location/enums.proto";
+import "frameworks/proto_logging/stats/enums/service/enums.proto";
 import "frameworks/proto_logging/stats/enums/service/procstats_enum.proto";
-import "frameworks/proto_logging/stats/enums/service/usb.proto";
 import "frameworks/proto_logging/stats/enums/stats/camera/camera.proto";
 import "frameworks/proto_logging/stats/enums/stats/connectivity/network_stack.proto";
 import "frameworks/proto_logging/stats/enums/stats/connectivity/tethering.proto";
@@ -544,14 +544,14 @@ message Atom {
         AppSearchPutDocumentStatsReported app_search_put_document_stats_reported = 348 [(module) = "framework"];
         DeviceControlChanged device_control_changed = 349 [(module) = "sysui"];
         DeviceStateChanged device_state_changed = 350 [(module) = "framework"];
-
         InputDeviceRegistered inputdevice_registered = 351 [(module) = "framework"];
+        SmartSpaceCardReported smartspace_card_reported = 352 [(module) = "sysui"];
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
     }
 
     // Pulled events will start at field 10000.
-    // Next: 10100
+    // Next: 10101
     oneof pulled {
         WifiBytesTransfer wifi_bytes_transfer = 10000 [(module) = "framework"];
         WifiBytesTransferByFgBg wifi_bytes_transfer_by_fg_bg = 10001 [(module) = "framework"];
@@ -663,6 +663,7 @@ message Atom {
         DeviceRotatedData device_rotated_data = 10097 [(module) = "framework"];
         CpuCyclesPerThreadGroupCluster cpu_cycles_per_thread_group_cluster = 10098 [(module) = "framework"];
         MediaDrmActivityInfo media_drm_activity_info = 10099;
+        OemManagedBytesTransfer oem_managed_bytes_transfer = 10100 [(module) = "framework"];
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
@@ -772,7 +773,7 @@ message TranscodingData {
         CAUSE_UNKNOWN = 0;
         TRANSCODING_SERVICE_ERROR = 1;     // Error from transcoding service.
         TRANSCODING_CLIENT_TIMEOUT = 2;    // Timeout from MediaProvider.
-        TRANSCODING_SESSOION_CANCELED = 3; // MediaProvider cancels the transcode.
+        TRANSCODING_SESSION_CANCELED = 3; // MediaProvider cancels the transcode.
     }
 
     enum AccessType {
@@ -3460,6 +3461,52 @@ message LauncherUIChanged {
     optional int32 cardinality = 24;
 }
 
+message SmartSpaceCardReported {
+    // Different SmartSpace cards.
+    enum CardType {
+        DEFAULT_CARD = 0;
+        COMMUTE = 1;
+        CALENDAR = 2;
+        FLIGHT = 3;
+        WEATHER = 4;
+        WEATHER_ALERT = 5;
+        AT_A_STORE_SHOPPING_LIST = 6;
+        AT_A_STORE_LOYALTY_CARD = 7;
+        HEADPHONE = 8;
+        TIMER = 9;
+        STOPWATCH = 10;
+        FITNESS_ACTIVITY = 11;
+        UPCOMING_REMINDER = 12;
+        UPCOMING_BEDTIME = 13;
+        TIME_TO_LEAVE = 14;
+        PACKAGE_DELIVERY = 15;
+        SPORT = 16;
+        STOCK = 17;
+        TIPS = 18;
+    }
+
+    // The surface that SmartSpace card is shown.
+    enum DisplaySurface {
+        DEFAULT_SURFACE = 0;
+        HOMESCREEN = 1;
+        LOCKSCREEN = 2;
+        AOD = 3;
+    }
+
+    // The event id (e.g., impression, click, longpress, dismiss)
+    optional int32 event_id = 1;
+    // Uniquely identifies a card. Should persist through updates.
+    optional int32 instance_id = 2;
+    // Uniquely identifies one of the possible types of the SmartSpace cards.
+    optional CardType card_type = 3;
+    // Location of the card when the event occurred.
+    optional DisplaySurface display_surface = 4;
+    // The position of the card in the carousel when the event occurred.
+    optional int32 rank = 5;
+    // The number of cards shown to the user.
+    optional int32 cardinality = 6;
+}
+
 /**
  * Used for snapshot of the HomeScreen UI elements
  *
@@ -4671,24 +4718,60 @@ message BinaryPushStateChanged {
         NO_REBOOT_PROMOTION_STRATEGY_ELIGIBLE = 30;
         REBOOT_TRIGGER_FAILURE = 31;
         // Logged after INSTALL_REQUESTED for devices installing a train which
-        // requires reboot and eligible for resume on reboot.
-        RESUME_ON_REBOOT_ELIGIBLE = 32;
-        // Logged when Phonesky trys to prepare RoR.
-        RESUME_ON_REBOOT_PREPARATION_INITITATED = 33;
-        // Logged when RoR preparation succeeded.
-        RESUME_ON_REBOOT_PREPARATION_SUCCESS = 34;
-        // Logged when RoR preparation failed.
-        RESUME_ON_REBOOT_PREPARATION_FAILURE = 35;
-        // Logged when Phonesky cannot schedule RoR job on a RoR eligible device.
-        ROR_JOB_NOT_SCHEDULE = 36;
+        // requires reboot and eligible for unattended reboot.
+        UNATTENDED_REBOOT_ELIGIBLE = 32;
+        // Logged when Phonesky trys to prepare LSKF.
+        LSKF_PREPARATION_INITITATED = 33;
+        // Logged when LSKF preparation succeeded.
+        LSKF_PREPARATION_SUCCESS = 34;
+        // Logged when LSKF preparation failed.
+        LSKF_PREPARATION_FAILURE = 35;
+        // Logged when Phonesky cannot schedule reboot job on a unattended reboot
+        // eligible device.
+        UNATTENDED_REBOOT_NOT_TRIGGERED = 36;
+        // Logged when SIM PIN recovery preparation succeeded.
+        SIM_PIN_PREPARATION_SUCCESS = 37;
+        // Logged when SIM PIN recovery preparation failed.
+        SIM_PIN_PREPARATION_FAILURE = 38;
+        // Logged when unattended reboot is aborted and falls back to organic
+        // reboot.
+        UNATTENDED_REBOOT_ABORT = 39;
+        // Logged when Phonesky re-prepares LSKF.
+        LSKF_PREPARATION_RETRY = 40;
+        // Logged when the device doesn’t support checkpoint and cannot stage
+        // multiple sessions.
+        CHECKPOINT_NOT_SUPPORTED = 41;
     }
     optional State state = 6;
     // Possible experiment ids for monitoring this push.
     optional TrainExperimentIds experiment_ids = 7 [(log_mode) = MODE_BYTES];
-    // user id
+    // Index of the Android User. E.g. 0 for primary profile, 10, 11, 12
+    // for guest and secondary profiles. Not PII.
     optional int32 user_id = 8;
+    // Log additional info for a state when needed. 0 is used as UNKNOWN_REASON
+    // accorss all states.
+    // When state = REBOOT_TRIGGERED or REBOOT_TRIGGER_FAILURE, this field logs
+    // the reboot type:
+    //  1: USERSPACE_REBOOT.
+    //  2: FORCED_REBOOT.
+    //  3: NOTIFICATION_RESTART_REBOOT.
+    //  4: Unattended reboot: device is secured and has SIM PIN.
+    //  5: Unattended reboot: device is secured and has no SIM PIN.
+    //  6: Unattended reboot: device is not secured and has SIM PIN.
+    // When state = INSTALL_FAILURE, this field logs the Install erros related
+    // statusCode.
+    // When state = UNATTENDED_REBOOT_ABORT, this field logs the cancellation
+    // reason:
+    //  1: LSKF is not prepared and exceeds the maximum retry threshold.
+    //  2: SIM PIN is not prepared.
+    // When state = UNATTENDED_REBOOT_ELIGIBLE, this field logs the cancellation
+    // reason:
+    //  1: device is secured and has SIM PIN.
+    //  2: device is secured and no SIM PIN.
+    //  3: device is not secured and has SIM PIN.
+    //  4: device is not secured and no SIM PIN.
     optional int32 reason = 9;
-    // Whether or not this is a rollback event
+    // Whether or not this is a rollback event.
     optional bool is_rollback = 10;
 }
 
@@ -5705,6 +5788,39 @@ message DataUsageBytesTransfer {
     // connected.
     optional bool is_nr_connected = 11;
 }
+
+/**
+ * Pulls bytes transferred via OEM managed networks. Data is split up by which
+ * type of OEM managed network it is, what transport it went over, and if it was
+ * in the foreground or background.
+ *
+ * Pulled from:
+ *   StatsPullAtomService
+ */
+ message OemManagedBytesTransfer {
+    optional int32 uid = 1 [(is_uid) = true];
+
+    // 1 denotes foreground and 0 denotes background. This is called Set in
+    // NetworkStats.
+    optional bool is_foreground = 2;
+
+    // Corresponds to the type of OEM managed network, see
+    // {@link NetworkTemplate#OEM_MANAGED_ANY} and {@code NetworkIdentity#OEM_*}.
+    optional int32 oem_managed_type = 3;
+
+    // Corresponds to the type of transport the bytes were transferred over, see
+    // {@link NetworkTemplate#transportToMatchRule} and
+    // {@code NetworkCapabilities#TRANSPORT_*}
+    optional int32 transport_type = 4;
+
+    optional int64 rx_bytes = 5;
+
+    optional int64 rx_packets = 6;
+
+    optional int64 tx_bytes = 7;
+
+    optional int64 tx_packets = 8;
+  }
 
 /**
  * Pulls bytes transferred via bluetooth. It is pulled from Bluetooth controller.
@@ -7738,7 +7854,7 @@ message DataStallEvent {
     // See definition in data_stall_event.proto.
     optional com.android.server.connectivity.ProbeResult validation_result = 2;
     // See definition in data_stall_event.proto.
-    optional android.net.NetworkCapabilitiesProto.Transport network_type = 3;
+    optional android.net.Transport network_type = 3;
     // See definition in data_stall_event.proto.
     optional com.android.server.connectivity.WifiData wifi_info = 4 [(log_mode) = MODE_BYTES];
     // See definition in data_stall_event.proto.
@@ -8221,7 +8337,7 @@ message SpeechDspStatReported {
  */
 message UsbContaminantReported {
     optional string id = 1;
-    optional android.service.usb.ContaminantPresenceStatus status = 2;
+    optional android.service.ContaminantPresenceStatus status = 2;
 }
 
 /**
@@ -8442,10 +8558,6 @@ message MediametricsCodecReported {
     optional int64 media_apex_version = 4;
 
     optional android.stats.mediametrics.CodecData codec_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
-
-    // Randomly generated playback ID. A Base64 encoded hex string representing a 128-bit integer.
-    // This field is the same as that in MediametricsPlaybackReported for the same playback.
-    optional string playback_id = 6;
 }
 
 /**
@@ -11096,6 +11208,7 @@ message CellBroadcastMessageFiltered {
         DUPLICATE_MESSAGE = 1;
         GEOFENCED_MESSAGE = 2;
         AREA_INFO_MESSAGE = 3;
+        DISABLED_BY_OEM = 4;
     }
 
     // GSM, CDMA, CDMA-SCP
@@ -13756,12 +13869,12 @@ enum ArtThreadType {
 
 // Indicates the type of dex metadata.
 enum ArtDexMetadataType {
-    UNKNOWN_DEX_METADATA = 0;
-    PROFILE = 1;
-    VDEX = 2;
-    PROFILE_AND_VDEX = 3;
-    NONE_DEX_METADATA = 4;
-    ERROR_DEX_METADATA = 5;
+  ART_DEX_METADATA_TYPE_UNKNOWN = 0;
+  ART_DEX_METADATA_TYPE_PROFILE = 1;
+  ART_DEX_METADATA_TYPE_VDEX = 2;
+  ART_DEX_METADATA_TYPE_PROFILE_AND_VDEX = 3;
+  ART_DEX_METADATA_TYPE_NONE = 4;
+  ART_DEX_METADATA_TYPE_ERROR = 5;
 }
 
 message ArtDatumReported {
