@@ -27,6 +27,7 @@ cc_library_host_static {
         "atoms.proto",
         "atom_field_options.proto",
         "enums/**/*.proto",
+        "message/*.proto",
     ],
 
     proto: {
@@ -59,5 +60,12 @@ filegroup {
     name: "libstats_atom_enum_protos",
     srcs: [
         "enums/**/*.proto",
+    ],
+}
+
+filegroup {
+    name: "libstats_atom_message_protos",
+    srcs: [
+        "message/*.proto",
     ],
 }
