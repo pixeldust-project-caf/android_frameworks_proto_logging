@@ -4859,6 +4859,18 @@ message BinaryPushStateChanged {
         // Logged when the device doesn’t support checkpoint and cannot stage
         // multiple sessions.
         CHECKPOINT_NOT_SUPPORTED = 41;
+        // Logged when Phonesky instructs Android platform to monitor reboot
+        // readiness signal.
+        PENDING_REBOOT_MARKED = 42;
+        // Logged when Phonesky instructs Android platform to stop monitoring reboot
+        // readiness signal.
+        PENDING_REBOOT_CANCELLED = 43;
+        // Logged when Phonesky receives reboot readiness broadcast and the device
+        // is ready to reboot.
+        SIGNAL_READY_TO_REBOOT_RECEIVED = 44;
+        // Logged when Phonesky receives reboot readiness broadcast and the device
+        // is not ready to reboot.
+        SIGNAL_NOT_READY_TO_REBOOT_RECEIVED = 45;
     }
     optional State state = 6;
     // Possible experiment ids for monitoring this push.
@@ -4866,28 +4878,34 @@ message BinaryPushStateChanged {
     // Index of the Android User. E.g. 0 for primary profile, 10, 11, 12
     // for guest and secondary profiles. Not PII.
     optional int32 user_id = 8;
-    // Log additional info for a state when needed. 0 is used as UNKNOWN_REASON
-    // accorss all states.
-    // When state = REBOOT_TRIGGERED or REBOOT_TRIGGER_FAILURE, this field logs
-    // the reboot type:
-    //  1: USERSPACE_REBOOT.
-    //  2: FORCED_REBOOT.
-    //  3: NOTIFICATION_RESTART_REBOOT.
-    //  4: Unattended reboot: device is secured and has SIM PIN.
-    //  5: Unattended reboot: device is secured and has no SIM PIN.
-    //  6: Unattended reboot: device is not secured and has SIM PIN.
-    // When state = INSTALL_FAILURE, this field logs the Install erros related
-    // statusCode.
+    // Log additional info for a state when needed.
+    // When state = REBOOT_TRIGGERED, this field logs the reboot type:
+    //  USERSPACE_REBOOT = 1.
+    //  FORCED_REBOOT = 2.
+    //  NOTIFICATION_RESTART_REBOOT = 3.
+    //  UNATTENDED_REBOOT_SECURED_AND_SIM_PIN = 4.
+    //  UNATTENDED_REBOOT_SECURED_NO_SIM_PIN = 5.
+    //  UNATTENDED_REBOOT_UNSECURED_AND_SIM_PIN = 6.
+    // When state = INSTALL_FAILURE, this field logs the Install errors related
+    // statusCode
     // When state = UNATTENDED_REBOOT_ABORT, this field logs the cancellation
     // reason:
-    //  1: LSKF is not prepared and exceeds the maximum retry threshold.
-    //  2: SIM PIN is not prepared.
+    //  LSKF_RETRY_EXCEED_MAXIMUM = 1.
+    //  SIM_PIN_NOT_PREPARED = 2.
     // When state = UNATTENDED_REBOOT_ELIGIBLE, this field logs the cancellation
     // reason:
-    //  1: device is secured and has SIM PIN.
-    //  2: device is secured and no SIM PIN.
-    //  3: device is not secured and has SIM PIN.
-    //  4: device is not secured and no SIM PIN.
+    //  UNATTENDED_REBOOT_SECURED_AND_SIM_PIN = 1.
+    //  UNATTENDED_REBOOT_SECURED_NO_SIM_PIN = 2.
+    //  UNATTENDED_REBOOT_UNSECURED_AND_SIM_PIN = 3.
+    //  UNATTENDED_REBOOT_UNSECURED_NO_SIM_PIN = 4.
+    // When state = UNATTENDED_REBOOT_NOT_TRIGGERED, this field logs the
+    // cancellation reason:
+    //  LSKF_NOT_PREPARED = 1.
+    //  REBOOT_NOT_READY = 2.
+    // When state = PENDING_REBOOT_CANCELLED, this field logs the cancellation
+    // reason:
+    //  LSKF_NOT_PREPARED = 1.
+    //  NO_STAGED_TRAIN = 2.
     optional int32 reason = 9;
     // Whether or not this is a rollback event.
     optional bool is_rollback = 10;
