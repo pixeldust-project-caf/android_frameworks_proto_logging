@@ -69,6 +69,7 @@ import "frameworks/proto_logging/stats/enums/view/enums.proto";
 import "frameworks/proto_logging/stats/enums/wifi/enums.proto";
 import "frameworks/proto_logging/stats/enums/stats/textclassifier/textclassifier_enums.proto";
 import "frameworks/proto_logging/stats/enums/stats/otaupdate/updateengine_enums.proto";
+import "frameworks/proto_logging/stats/message/mediametrics_message.proto";
 
 /**
  * The primary atom class. This message defines all of the available
@@ -5811,6 +5812,7 @@ message UIActionLatencyReported {
         ACTION_FACE_WAKE_AND_UNLOCK = 8;
         ACTION_START_RECENTS_ANIMATION = 9;
         ACTION_ROTATE_SCREEN_CAMERA_CHECK = 10;
+        ACTION_ROTATE_SCREEN_SENSOR = 11;
     }
 
     optional ActionType action = 1;
@@ -8729,7 +8731,7 @@ message MediametricsCodecReported {
     optional int64 package_version_code = 3;
     optional int64 media_apex_version = 4;
 
-    optional android.stats.mediametrics.CodecData codec_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
+    optional android.stats.mediametrics_message.CodecData codec_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
 }
 
 /**
