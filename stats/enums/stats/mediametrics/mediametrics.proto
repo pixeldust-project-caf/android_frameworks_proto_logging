@@ -148,8 +148,7 @@ message ExtractorData {
     }
 
     optional EntryPoint entry_point = 4 [default = UNSET];
-    // TODO: change to log_session_id
-    optional string playback_id = 5;
+    optional string log_session_id = 5;
 }
 
 /**
