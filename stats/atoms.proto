@@ -9061,7 +9061,7 @@ message MediametricsRecorderReported {
     optional int64 package_version_code = 3;
     optional int64 media_apex_version = 4;
 
-    optional android.stats.mediametrics.RecorderData recorder_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
+    optional android.stats.mediametrics_message.RecorderData recorder_data = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
 }
 
 /**
@@ -11460,6 +11460,9 @@ message PerfettoTrigger {
 
         PERFETTO_TRACED_LIMIT_PROBABILITY = 5;
         PERFETTO_TRACED_LIMIT_MAX_PER_24_H = 6;
+
+        PERFETTO_PROBES_PRODUCER_TRIGGER = 7;
+        PERFETTO_PROBES_PRODUCER_TRIGGER_FAIL = 8;
     }
 
     // The event which fired.
@@ -15100,6 +15103,9 @@ message MediametricsAAudioStreamReported {
         CONTENT_TYPE_INVALID = -1;
     }
     optional ContentType content_type = 17;
+
+    // The mode of sharing the device requested by the client.
+    optional SharingMode sharing_requested = 18;
 }
 
 /**
