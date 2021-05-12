@@ -4731,6 +4731,12 @@ message NotificationReported {
     optional android.stats.sysui.NotificationImportance importance_asst = 19;
     optional int32 assistant_hash = 20;
     optional float assistant_ranking_score = 21;
+
+    // Fields for tracking ongoing and foreground service notifications
+    optional bool is_ongoing = 22;
+    optional bool is_foreground_service = 23;
+    // Fields to know about the timeout for notifications.
+    optional int64 timeout_millis = 24;
 }
 
 message Notification {
