@@ -3103,7 +3103,6 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     GAME_SETTINGS = 1886;
-<<<<<<< TARGET BRANCH (206dfd Add ART_COMPILATION_REASON_PREBUILT, ART_COMPILATION_REASON_)
 
     // OPEN: Settings > Security > Warnings (if using alternative security settings).
     // CATEGORY: SETTINGS
@@ -3124,6 +3123,4 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     OPEN_APP_RESTRICTED_LIST = 1890;
-=======
->>>>>>> SOURCE BRANCH (c7da80 Add GAME_SETTINGS enum for Game settings. am: c9df4097a4)
 }
