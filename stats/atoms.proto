@@ -15104,8 +15104,9 @@ message MediaNetworkInfoChanged {
     optional string log_session_id = 1;
     //  New network type
     optional android.stats.mediametrics.NetworkType type = 2;
-    //  Network Start time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
+    // When the network info change occurred relative to playback creation
+    // time in milliseconds.
+    // It is in absolute time (e.g. always ticks even if the playback is paused).
     optional int64 time_since_playback_created_millis = 3;
 }
 
@@ -15115,8 +15116,9 @@ message MediaPlaybackStateChanged {
     optional string log_session_id = 1;
     //  New playback state
     optional android.stats.mediametrics.PlaybackState playback_state = 2;
-    //  State change time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
+    // When the state change occurred relative to playback creation time in
+    // milliseconds.
+    // It is in absolute time (e.g. always ticks even if the playback is paused).
     optional int64 time_since_playback_created_millis = 3;
 }
 
@@ -15130,8 +15132,8 @@ message MediaPlaybackErrorReported {
     optional android.stats.mediametrics.PlaybackErrorCode error_code = 3;
     //  Sub-code of error type specified by the error code.
     optional int32 sub_error_code = 4;
-    //  Error time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
+    // When the error occurred relative to playback creation time in millisecond.
+    // It is in absolute time (e.g. always ticks even if the playback is paused).
     optional int64 time_since_playback_created_millis = 5;
 }
 
@@ -15153,9 +15155,10 @@ message MediaPlaybackTrackChanged {
     //  Bits per second. 0 means unknown.
     optional int32 bitrate = 7;
 
-    //  Track change time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
-    optional int64 time_since_playback_created_millis = 8;
+   // When the track change occurred, relative to playback creation time in
+   // millisecond.
+   // It is in absolute time (e.g. always ticks even if the playback is paused).
+   optional int64 time_since_playback_created_millis = 8;
 
     //  Track type. Audio, Video, Text
     optional android.stats.mediametrics.TrackType type = 9;
