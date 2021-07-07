@@ -16643,8 +16643,8 @@ message PrivacySensorToggleInteraction {
 
     enum Sensor {
         SENSOR_UNKNOWN = 0;
-        CAMERA = 1;
-        MICROPHONE = 2;
+        MICROPHONE = 1;
+        CAMERA = 2;
     }
 
     // Sensor for which sensor privacy was toggled.
