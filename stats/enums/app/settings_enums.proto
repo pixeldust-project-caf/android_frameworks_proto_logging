@@ -3229,6 +3229,11 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: S
     SOUND_NOTIFICATIONS = 1906;
+
+    // OPEN: Settings > Display > Lock screen > Hub mode > Shared Apps
+    // CATEGORY: SETTINGS
+    // OS: T
+    COMMUNAL_MODE_SHARED_APP_SETTINGS = 1907;
 }
 
 // Battery Saver schedule types.
