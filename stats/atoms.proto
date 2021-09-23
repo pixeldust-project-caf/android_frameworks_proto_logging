@@ -524,6 +524,7 @@ message Atom {
         DeviceRotated device_rotated = 333 [(module) = "framework"];
         SimSpecificSettingsRestored sim_specific_settings_restored = 334
             [(module) = "telephony"];
+        TextClassifierDownloadReported text_classifier_download_reported = 335 [(module) = "textclassifier"];
         PinStorageEvent pin_storage_event = 336 [(module) = "telephony"];
         FaceDownReported face_down_reported = 337 [(module) = "framework"];
         BluetoothHALCrashReasonReported bluetooth_hal_crash_reason_reported =
@@ -578,13 +579,15 @@ message Atom {
         PrivacySensorToggleInteraction privacy_sensor_toggle_interaction = 381 [(module) = "framework"];
         PrivacyToggleDialogInteraction privacy_toggle_dialog_interaction = 382 [(module) = "framework"];
         AppSearchOptimizeStatsReported app_search_optimize_stats_reported = 383 [(module) = "appsearch"];
+        NonA11yToolServiceWarningReported non_a11y_tool_service_warning_report = 384 [(module) = "framework"];
+        AppSearchSetSchemaStatsReported app_search_set_schema_stats_reported = 385 [(module) = "appsearch"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
     }
 
     // Pulled events will start at field 10000.
-    // Next: 10118
+    // Next: 10127
     oneof pulled {
         WifiBytesTransfer wifi_bytes_transfer = 10000 [(module) = "framework"];
         WifiBytesTransferByFgBg wifi_bytes_transfer_by_fg_bg = 10001 [(module) = "framework"];
@@ -704,6 +707,8 @@ message Atom {
         ProcessDmabufMemory process_dmabuf_memory = 10105 [(module) = "framework"];
         PendingAlarmInfo pending_alarm_info = 10106 [(module) = "framework"];
         UserLevelHibernatedApps user_level_hibernated_apps = 10107 [(module) = "framework"];
+        LauncherLayoutSnapshot launcher_layout_snapshot = 10108
+            [(module) = "sysui"];
         GlobalHibernatedApps global_hibernated_apps = 10109 [(module) = "framework"];
         InputEventLatencySketch input_event_latency_sketch = 10110 [(module) = "input"];
         BatteryUsageStatsBeforeReset battery_usage_stats_before_reset =
@@ -731,6 +736,7 @@ message Atom {
                 10123 [(module) = "framework"];
         RkpErrorStats rkp_error_stats = 10124 [(module) = "framework"];
         Keystore2CrashStats keystore2_crash_stats = 10125 [(module) = "framework"];
+        VendorApexInfo vendor_apex_info = 10126 [(module) = "framework"];
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
@@ -3566,6 +3572,7 @@ message SmartSpaceCardReported {
         TIME_TO_LEAVE = 15;
         PACKAGE_DELIVERED = 16;
         TIPS = 17;
+        DOORBELL = 18;
     }
 
     // The surface that SmartSpace card is shown.
@@ -3640,6 +3647,54 @@ message LauncherStaticLayout {
 
     // Used to store features of the target (e.g. widget is reconfigurable, etc)
     optional int32 features = 19;
+}
+
+/**
+ * Used for logging launcher static elements using pulled atom.
+ *
+ * Logged from:
+ *   packages/apps/Launcher3
+ */
+message LauncherLayoutSnapshot {
+  // The event id (e.g., snapshot, drag and drop)
+  optional int32 event_id = 1;
+  // The event's source or target id (e.g., icon, shortcut, widget)
+  optional int32 item_id = 2;
+  // If the target needs to be tracked, use this id field
+  optional int32 instance_id = 3;
+  optional int32 uid = 4 [(is_uid) = true];
+  optional string package_name = 5;
+  optional string component_name = 6;
+
+  // (x, y) coordinate and the index information of the target on the container
+  optional int32 grid_x = 7 [default = -1];
+  optional int32 grid_y = 8 [default = -1];
+  optional int32 page_id = 9 [default = -2];
+
+  // e.g., folder icon's (x, y) location and index information on the workspace
+  // e.g., when used with widgets target, use these values for (span_x, span_y)
+  optional int32 grid_x_parent = 10 [default = -1];
+  optional int32 grid_y_parent = 11 [default = -1];
+  optional int32 page_id_parent = 12 [default = -2];
+
+  // UNKNOWN = 0
+  // HOTSEAT = 1
+  // WORKSPACE = 2
+  // FOLDER_HOTSEAT = 3
+  // FOLDER_WORKSPACE = 4
+  optional int32 container_id = 13;
+
+  optional bool is_work_profile = 14;
+
+  // e.g., PIN, WIDGET TRAY, APPS TRAY, PREDICTION
+  optional int32 attribute_id = 15;
+
+  // e.g., number of icons inside a folder
+  optional int32 cardinality = 16;
+
+  // e.g., (x, y) span of the widget inside homescreen grid system
+  optional int32 span_x = 17 [default = 1];
+  optional int32 span_y = 18 [default = 1];
 }
 
 /**
@@ -4723,6 +4778,12 @@ message NotificationReported {
     optional android.stats.sysui.NotificationImportance importance_asst = 19;
     optional int32 assistant_hash = 20;
     optional float assistant_ranking_score = 21;
+
+    // Fields for tracking ongoing and foreground service notifications
+    optional bool is_ongoing = 22;
+    optional bool is_foreground_service = 23;
+    // Fields to know about the timeout for notifications.
+    optional int64 timeout_millis = 24;
 }
 
 message Notification {
@@ -5098,14 +5159,79 @@ message BinaryPushStateChanged {
         // (e.g. soft restart, notification restart).
         NO_REBOOT_PROMOTION_STRATEGY_ELIGIBLE = 30;
         REBOOT_TRIGGER_FAILURE = 31;
+        // Logged after INSTALL_REQUESTED for devices installing a train which
+        // requires reboot and eligible for unattended reboot.
+        UNATTENDED_REBOOT_ELIGIBLE = 32;
+        // Logged when Phonesky trys to prepare LSKF.
+        LSKF_PREPARATION_INITITATED = 33;
+        // Logged when LSKF preparation succeeded.
+        LSKF_PREPARATION_SUCCESS = 34;
+        // Logged when LSKF preparation failed.
+        LSKF_PREPARATION_FAILURE = 35;
+        // Logged when Phonesky cannot schedule reboot job on a unattended reboot
+        // eligible device.
+        UNATTENDED_REBOOT_NOT_TRIGGERED = 36;
+        // Logged when SIM PIN recovery preparation succeeded.
+        SIM_PIN_PREPARATION_SUCCESS = 37;
+        // Logged when SIM PIN recovery preparation failed.
+        SIM_PIN_PREPARATION_FAILURE = 38;
+        // Logged when unattended reboot is aborted and falls back to organic
+        // reboot.
+        UNATTENDED_REBOOT_ABORT = 39;
+        // Logged when Phonesky re-prepares LSKF.
+        LSKF_PREPARATION_RETRY = 40;
+        // Logged when the device doesn’t support checkpoint and cannot stage
+        // multiple sessions.
+        CHECKPOINT_NOT_SUPPORTED = 41;
+        // Logged when Phonesky instructs Android platform to monitor reboot
+        // readiness signal.
+        PENDING_REBOOT_MARKED = 42;
+        // Logged when Phonesky instructs Android platform to stop monitoring reboot
+        // readiness signal.
+        PENDING_REBOOT_CANCELLED = 43;
+        // Logged when Phonesky receives reboot readiness broadcast and the device
+        // is ready to reboot.
+        SIGNAL_READY_TO_REBOOT_RECEIVED = 44;
+        // Logged when Phonesky receives reboot readiness broadcast and the device
+        // is not ready to reboot.
+        SIGNAL_NOT_READY_TO_REBOOT_RECEIVED = 45;
     }
     optional State state = 6;
     // Possible experiment ids for monitoring this push.
     optional TrainExperimentIds experiment_ids = 7 [(log_mode) = MODE_BYTES];
-    // user id
+    // Index of the Android User. E.g. 0 for primary profile, 10, 11, 12
+    // for guest and secondary profiles. Not PII.
     optional int32 user_id = 8;
+    // Log additional info for a state when needed.
+    // When state = REBOOT_TRIGGERED, this field logs the reboot type:
+    //  USERSPACE_REBOOT = 1.
+    //  FORCED_REBOOT = 2.
+    //  NOTIFICATION_RESTART_REBOOT = 3.
+    //  UNATTENDED_REBOOT_SECURED_AND_SIM_PIN = 4.
+    //  UNATTENDED_REBOOT_SECURED_NO_SIM_PIN = 5.
+    //  UNATTENDED_REBOOT_UNSECURED_AND_SIM_PIN = 6.
+    // When state = INSTALL_FAILURE, this field logs the Install errors related
+    // statusCode
+    // When state = UNATTENDED_REBOOT_ABORT, this field logs the cancellation
+    // reason:
+    //  LSKF_RETRY_EXCEED_MAXIMUM = 1.
+    //  SIM_PIN_NOT_PREPARED = 2.
+    // When state = UNATTENDED_REBOOT_ELIGIBLE, this field logs the cancellation
+    // reason:
+    //  UNATTENDED_REBOOT_SECURED_AND_SIM_PIN = 1.
+    //  UNATTENDED_REBOOT_SECURED_NO_SIM_PIN = 2.
+    //  UNATTENDED_REBOOT_UNSECURED_AND_SIM_PIN = 3.
+    //  UNATTENDED_REBOOT_UNSECURED_NO_SIM_PIN = 4.
+    // When state = UNATTENDED_REBOOT_NOT_TRIGGERED, this field logs the
+    // cancellation reason:
+    //  LSKF_NOT_PREPARED = 1.
+    //  REBOOT_NOT_READY = 2.
+    // When state = PENDING_REBOOT_CANCELLED, this field logs the cancellation
+    // reason:
+    //  LSKF_NOT_PREPARED = 1.
+    //  NO_STAGED_TRAIN = 2.
     optional int32 reason = 9;
-    // Whether or not this is a rollback event
+    // Whether or not this is a rollback event.
     optional bool is_rollback = 10;
 }
 
@@ -5948,7 +6074,7 @@ message BlobOpened{
  * Logged from:
  *  frameworks/base/core/java/com/android/internal/jank/FrameTracker.java
  *
- * Next Tag: 31
+ * Next Tag: 38
  */
 message UIInteractionFrameInfoReported {
     enum InteractionType {
@@ -5988,6 +6114,8 @@ message UIInteractionFrameInfoReported {
         SHADE_APP_LAUNCH_FROM_QS_TILE = 33;
         SHADE_APP_LAUNCH_FROM_SETTINGS_BUTTON = 34;
         STATUS_BAR_APP_LAUNCH_FROM_CALL_CHIP = 35;
+        PIP_TRANSITION = 36;
+        WALLPAPER_TRANSITION = 37;
     }
 
     optional InteractionType interaction_type = 1;
@@ -11256,6 +11384,78 @@ message AppSearchOptimizeStatsReported {
     optional int64 native_time_since_last_optimize_millis = 13;
 }
 
+/**
+ * Logs detailed stats for setting schema in AppSearch.
+ *
+ * stats pushed from:
+ *   frameworks/base/apex/appsearch/service/java/com/android/server/appsearch/AppSearchManagerService.java
+ *
+ * Next tag: 13
+ */
+message AppSearchSetSchemaStatsReported {
+    // The sampling interval for this specific type of stats
+    // For example, sampling_interval=10 means that one out of every 10 stats was logged.
+    optional int32 sampling_interval = 1;
+
+    // # of previous skipped sample for this specific type of stats
+    // We can't push atoms too closely, so some samples might be skipped
+    // In order to extrapolate the counts, we need to save the number of skipped stats and add it back
+    // For example, the true count of an event could be estimated as:
+    //   SUM(sampling_interval * (num_skipped_sample + 1)) as est_count
+    optional int32 num_skipped_sample = 2;
+
+    // Package UID of the application.
+    optional int32 uid = 3 [(is_uid) = true];
+
+    // Hash of the database name within AppSearch
+    optional int32 database = 4;
+
+    // Needs to be sync with AppSearchResult#ResultCode in
+    // frameworks/base/apex/appsearch/framework/java/android/app/appsearch/AppSearchResult.java
+    optional int32 status_code = 5;
+
+    // Overall time used for setting schema including the binder latency
+    optional int32 total_latency_millis = 6;
+
+    // Number of newly added schema types
+    optional int32 new_type_count = 7;
+
+    // Number of deleted schema types
+    optional int32 deleted_type_count = 8;
+
+    // Number of compatible schema type changes
+    optional int32 compatible_type_change_count = 9;
+
+    // Number of index-incompatible schema type changes
+    optional int32 index_incompatible_type_change_count = 10;
+
+    // Number of backwards-incompatible schema type changes
+    optional int32 backwards_incompatible_type_change_count = 11;
+
+    // Stores schema migration info if migration is executed with setting schema
+    optional SchemaMigrationStats schema_migration_stats = 12
+        [(android.os.statsd.log_mode) = MODE_BYTES];
+}
+
+/**
+ * Logs detailed stats for schema migration in AppSearch
+ */
+message SchemaMigrationStats {
+    optional int32 get_schema_latency_millis = 1;
+
+    optional int32 query_and_transform_latency_millis = 2;
+
+    optional int32 first_set_schema_latency_millis = 3;
+
+    optional int32 second_set_schema_latency_millis = 4;
+
+    optional int32 save_document_latency_millis = 5;
+
+    optional int32 migrated_document_count = 6;
+
+    optional int32 saved_document_count = 7;
+}
+
 // Reports information in external/icing/proto/icing/proto/storage.proto#DocumentStorageInfoProto
 // Next tag: 15
 message AppSearchDocumentStorageInfo {
@@ -14878,6 +15078,58 @@ message TextClassifierApiUsageReported {
 }
 
 /**
+ * Logs when TextClassifier Model Downloader schedule/finish a task.
+ *
+ * Logged from: external/libtextclassifier/java/
+ */
+message TextClassifierDownloadReported {
+    // The model type to download
+    enum ModelType {
+        UNKNOWN_MODEL_TYPE = 0;
+        ANNOTATOR = 1;
+        LANG_ID = 2;
+        ACTIONS_SUGGESTIONS = 3;
+    }
+    optional ModelType model_type = 1;
+    // The file type to download
+    enum FileType {
+        UNKNOWN_FILE_TYPE = 0;
+        MANIFEST = 1;
+        MODEL = 2;
+    }
+    optional FileType file_type = 2;
+    // The status of the download
+    enum DownloadStatus {
+        UNKNOWN_STATUS = 0;
+        SCHEDULED = 1;
+        SUCCEEDED = 2;
+        FAILED_AND_RETRY = 3;
+        FAILED_AND_ABORT = 4;
+    }
+    optional DownloadStatus download_status = 3;
+    // The suffix of the url (without namespace) to download from, which contains model version and
+    // locale info (e.g. 'r/v803/en.fb'). We use this to uniquely identify a model/manifest file.
+    optional string url_suffix = 4;
+    // Failure reason, only set if this is for a failure status
+    enum FailureReason {
+        UNKNOWN_FAILURE_REASON = 0;
+        FAILED_TO_SCHEDULE = 1;
+        FAILED_TO_DOWNLOAD_SERVICE_CONN_BROKEN = 2;
+        FAILED_TO_DOWNLOAD_404_ERROR = 3;
+        FAILED_TO_DOWNLOAD_OTHER = 4;
+        DOWNLOADED_FILE_MISSING = 5;
+        FAILED_TO_PARSE_MANIFEST = 6;
+        FAILED_TO_VALIDATE_MODEL = 7;
+        FAILED_TO_MOVE_MODEL = 8;
+        WORKER_STOPPED = 9;
+    }
+    optional FailureReason failure_reason = 5;
+    // How many attempts we have tried for the same task at a terminal status (i.e. SUCCEEDED or
+    // FAILED_AND_ABORT).
+    optional int32 run_attempt_count = 6;
+}
+
+/**
  * Logs the current state of an application before it is killed.
  *
  * Pushed from:
@@ -15088,8 +15340,9 @@ message MediaNetworkInfoChanged {
     optional string log_session_id = 1;
     //  New network type
     optional android.stats.mediametrics.NetworkType type = 2;
-    //  Network Start time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
+    // When the network info change occurred relative to playback creation
+    // time in milliseconds.
+    // It is in absolute time (e.g. always ticks even if the playback is paused).
     optional int64 time_since_playback_created_millis = 3;
 }
 
@@ -15099,8 +15352,9 @@ message MediaPlaybackStateChanged {
     optional string log_session_id = 1;
     //  New playback state
     optional android.stats.mediametrics.PlaybackState playback_state = 2;
-    //  State change time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
+    // When the state change occurred relative to playback creation time in
+    // milliseconds.
+    // It is in absolute time (e.g. always ticks even if the playback is paused).
     optional int64 time_since_playback_created_millis = 3;
 }
 
@@ -15114,8 +15368,8 @@ message MediaPlaybackErrorReported {
     optional android.stats.mediametrics.PlaybackErrorCode error_code = 3;
     //  Sub-code of error type specified by the error code.
     optional int32 sub_error_code = 4;
-    //  Error time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
+    // When the error occurred relative to playback creation time in millisecond.
+    // It is in absolute time (e.g. always ticks even if the playback is paused).
     optional int64 time_since_playback_created_millis = 5;
 }
 
@@ -15137,9 +15391,10 @@ message MediaPlaybackTrackChanged {
     //  Bits per second. 0 means unknown.
     optional int32 bitrate = 7;
 
-    //  Track change time, relative to playback creation time in millisecond.
-    //  It's in absolute time (e.g. always ticks even if the playback is paused).
-    optional int64 time_since_playback_created_millis = 8;
+   // When the track change occurred, relative to playback creation time in
+   // millisecond.
+   // It is in absolute time (e.g. always ticks even if the playback is paused).
+   optional int64 time_since_playback_created_millis = 8;
 
     //  Track type. Audio, Video, Text
     optional android.stats.mediametrics.TrackType type = 9;
@@ -15343,6 +15598,7 @@ message ImsServiceEntitlementUpdated {
 
 // Indicates which compile filter was used for the package being loaded in an ART session.
 enum ArtCompileFilter {
+    ART_COMPILATION_FILTER_UNSPECIFIED = 0;
     ART_COMPILATION_FILTER_ERROR = 1;
     ART_COMPILATION_FILTER_UNKNOWN = 2;
     ART_COMPILATION_FILTER_ASSUMED_VERIFIED = 3;
@@ -15361,6 +15617,7 @@ enum ArtCompileFilter {
 }
 
 enum ArtCompilationReason {
+    ART_COMPILATION_REASON_UNSPECIFIED = 0;
     ART_COMPILATION_REASON_ERROR = 1;
     ART_COMPILATION_REASON_UNKNOWN = 2;
     ART_COMPILATION_REASON_FIRST_BOOT = 3;
@@ -15380,6 +15637,7 @@ enum ArtCompilationReason {
     ART_COMPILATION_REASON_BOOT_AFTER_OTA = 17;
     ART_COMPILATION_REASON_PREBUILT = 18;
     ART_COMPILATION_REASON_CMDLINE = 19;
+    ART_COMPILATION_REASON_VDEX = 20;
 }
 
 // Indicates which kind of measurement ART is reporting.
@@ -15424,6 +15682,7 @@ enum ArtDatumId {
 
 // Indicates what class of thread the reported values apply to.
 enum ArtThreadType {
+    ART_THREAD_UNKNOWN = 0;
     ART_THREAD_MAIN = 1;
     ART_THREAD_BACKGROUND = 2;
 }
@@ -15888,6 +16147,18 @@ message DeviceControlChanged {
     optional bool is_locked = 5;
 }
 
+/*
+ * Logged when hardware based user-configurable device state changes.
+ *
+ * Logged from:
+ *     frameworks/base/services/core/java/com/android/server/devicestate/DeviceStateManagerService.java
+ */
+message DeviceStateChanged {
+    optional int32 new_device_state = 1
+            [(state_field_option).exclusive_state = true, (state_field_option).nested = false];
+    optional bool boot_state = 2;
+}
+
 /**
  * This metric is collected at the end of playback
  * as a pulled atom.
@@ -16016,18 +16287,6 @@ message MediaDrmActivityInfo {
 
     optional DrmFrameworkMetrics framework_metrics = 5 [(android.os.statsd.log_mode) = MODE_BYTES];
     optional bytes vendor_metrics = 6 [(android.os.statsd.log_mode) = MODE_BYTES];
-}
-
-/*
- * Logged when hardware based user-configurable device state changes.
- *
- * Logged from:
- *     frameworks/base/services/core/java/com/android/server/devicestate/DeviceStateManagerService.java
- */
-message DeviceStateChanged {
-    optional int32 new_device_state = 1
-            [(state_field_option).exclusive_state = true, (state_field_option).nested = false];
-    optional bool boot_state = 2;
 }
 
 /*
@@ -16533,7 +16792,6 @@ message PrivacySensorToggleInteraction {
         SENSOR_UNKNOWN = 0;
         MICROPHONE = 1;
         CAMERA = 2;
-
     }
 
     // Sensor for which sensor privacy was toggled.
@@ -16575,4 +16833,31 @@ message PrivacyToggleDialogInteraction {
 
     // Name of the package for which the dialog was shown.
     optional string package_name = 2;
+}
+
+message VendorApexInfo {
+  optional string package_name = 1;
+  optional string version_code = 2;
+  optional string version_name = 3;
+  optional string source_dir = 4;
+  optional string signing_certs_hash = 5;
+  optional string file_hash = 6;
+}
+
+/**
+ * Logs the non-a11yTool service warning status and its duration of the usage.
+ *
+ * Logged from:
+ *   frameworks/base/services/accessibility/java/com/android/server/accessibility
+ *   packages/apps/Settings
+ */
+message NonA11yToolServiceWarningReported {
+    // Package name of the non-a11yTool service.
+    optional string package_name = 1;
+
+    // Warning status of the non-a11yTool service.
+    optional android.stats.accessibility.WarningStatus status = 2;
+
+    // Duration between status in milliseconds.
+    optional int64 duration_millis = 3;
 }
