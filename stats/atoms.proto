@@ -313,7 +313,8 @@ message Atom {
         ProcessStartTime process_start_time = 169 [(module) = "framework"];
         PermissionGrantRequestResultReported permission_grant_request_result_reported =
                 170 [(module) = "permissioncontroller"];
-        BluetoothSocketConnectionStateChanged bluetooth_socket_connection_state_changed = 171;
+        BluetoothSocketConnectionStateChanged bluetooth_socket_connection_state_changed =
+                171 [(module) = "bluetooth"];
         DeviceIdentifierAccessDenied device_identifier_access_denied =
                 172 [(module) = "telephony_common"];
         BubbleDeveloperErrorReported bubble_developer_error_reported = 173 [(module) = "framework"];
@@ -581,13 +582,22 @@ message Atom {
         AppSearchOptimizeStatsReported app_search_optimize_stats_reported = 383 [(module) = "appsearch"];
         NonA11yToolServiceWarningReported non_a11y_tool_service_warning_report = 384 [(module) = "framework"];
         AppSearchSetSchemaStatsReported app_search_set_schema_stats_reported = 385 [(module) = "appsearch"];
+        AppCompatStateChanged app_compat_state_changed = 386 [(module) = "framework"];
+        SizeCompatRestartButtonEventReported size_compat_restart_button_event_reported = 387 [(module) = "framework"];
+        SplitscreenUIChanged splitscreen_ui_changed = 388 [(module) = "framework"];
+        NetworkDnsHandshakeReported network_dns_handshake_reported = 389 [(module) = "resolv"];
+        BluetoothCodePathCounter bluetooth_code_path_counter =
+            390 [(module) = "bluetooth"];
+        BluetoothLeBatchScanReportDelay bluetooth_le_batch_scan_report_delay =
+            392 [(module) = "bluetooth"];
+        AccessibilityFloatingMenuUIChanged accessibility_floating_menu_ui_changed = 393 [(module) = "sysui"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
     }
 
     // Pulled events will start at field 10000.
-    // Next: 10127
+    // Next: 10130
     oneof pulled {
         WifiBytesTransfer wifi_bytes_transfer = 10000 [(module) = "framework"];
         WifiBytesTransferByFgBg wifi_bytes_transfer_by_fg_bg = 10001 [(module) = "framework"];
@@ -737,6 +747,11 @@ message Atom {
         RkpErrorStats rkp_error_stats = 10124 [(module) = "framework"];
         Keystore2CrashStats keystore2_crash_stats = 10125 [(module) = "framework"];
         VendorApexInfo vendor_apex_info = 10126 [(module) = "framework"];
+        AccessibilityShortcutStats accessibility_shortcut_stats = 10127 [(module) = "framework"];
+        AccessibilityFloatingMenuStats accessibility_floating_menu_stats =
+            10128 [(module) = "framework"];
+        DataUsageBytesTransferV2 data_usage_bytes_transfer_v2 = 10129 [(module) = "framework",
+                (truncate_timestamp) = true];
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
@@ -1956,8 +1971,19 @@ message KeyguardBouncerStateChanged {
         // Bouncer is hidden, either as a result of successfully entering the
         // password, screen timing out, or user going back to lock screen.
         HIDDEN = 1;
-        // This is when the user is being prompted to enter the password.
+        // The user is being prompted to enter the password and the keyguard is NOT in one
+        // handed mode.
         SHOWN = 2;
+        // The user is being prompted to enter the password and the keyguard shows in one
+        // handed mode and left aligned.
+        SHOWN_LEFT = 3;
+        // The user is being prompted to enter the password and the keyguard shows in one
+        // handed mode and right aligned.
+        SHOWN_RIGHT = 4;
+        // The keyguard switches to the left side while it is in one handed mode.
+        SWITCH_LEFT = 5;
+        // The keyguard switches to the right side while it is in one handed mode.
+        SWITCH_RIGHT = 6;
     }
     optional State state = 1;
 }
@@ -1977,6 +2003,13 @@ message KeyguardBouncerPasswordEntered {
         SUCCESS = 2;
     }
     optional BouncerResult result = 1;
+
+    enum BouncerSide {
+        DEFAULT = 0;
+        LEFT = 1;
+        RIGHT = 2;
+    }
+    optional BouncerSide side = 2;
 }
 
 /*
@@ -3194,6 +3227,35 @@ message InputDeviceRegistered {
 }
 
 /**
+ * Logs when the counter is incremented
+ *
+ * Logged from:
+ *   system/bt
+ *   packages/apps/Bluetooth
+ *
+ */
+message BluetoothCodePathCounter {
+    // Keys of events with enum ranges to be defined
+    optional android.bluetooth.CodePathCounterKeyEnum key = 1;
+    // Number of frequency of events
+    optional int64 number = 2;
+}
+
+/**
+ * Logs when an application attempts to start a Bluetooth Low Energy scan.
+ * It only happens when the scan is initiated and does not repeatedly call
+ * while the scan is running.
+ *
+ * Logged from:
+ *   packages/apps/Bluetooth/src/com/android/bluetooth/gatt/GattService.java
+ *
+ */
+message BluetoothLeBatchScanReportDelay {
+    optional int32 application_uid = 1;
+    optional int64 application_report_delay_millis = 2;
+}
+
+/**
  * Logs when something is plugged into or removed from the USB-C connector.
  *
  * Logged from:
@@ -3573,6 +3635,7 @@ message SmartSpaceCardReported {
         PACKAGE_DELIVERED = 16;
         TIPS = 17;
         DOORBELL = 18;
+        CROSS_DEVICE_TIMER = 19;
     }
 
     // The surface that SmartSpace card is shown.
@@ -3589,13 +3652,28 @@ message SmartSpaceCardReported {
     // Uniquely identifies a card. Should persist through updates.
     optional int32 instance_id = 2;
     // Uniquely identifies one of the possible types of the SmartSpace cards.
-    optional CardType card_type = 3;
+    // Deprecated. Please read card_type_id instead.
+    optional CardType card_type = 3 [deprecated = true];
     // Location of the card when the event occurred.
     optional DisplaySurface display_surface = 4;
     // The position of the card in the carousel when the event occurred.
     optional int32 rank = 5;
     // The number of cards shown to the user.
     optional int32 cardinality = 6;
+    // Uniquely identifies one of the possible types of the SmartSpace cards.
+    // To replace card_type. See go/smartspace-aster-metrics#card-type-id.
+    optional int32 card_type_id = 7;
+    // The app that the Smartspace card is tied to.
+    optional int32 uid = 8 [(is_uid) = true];
+    // If multiple subcards are displayed simultaneously, the position of
+    // the subcard that was interacted with.
+    optional int32 interacted_subcard_rank = 9;
+    // If multiple subcards are displayed simultaneously, the number of subcards
+    // shown when the interaction occurred.
+    optional int32 interacted_subcard_cardinality = 10;
+    // The time it takes in ms from smartspace target is created to sysui receives
+    // the target.
+    optional int32 received_latency_millis = 11;
 }
 
 /**
@@ -4395,6 +4473,56 @@ message AppStartFullyDrawn {
 
     // The hash value of the activity name.
     optional int32 activity_name_hash = 13;
+}
+
+/**
+ * Logs when an app enters a different App Compat state.
+ *
+ * Logged from:
+ *   frameworks/base/services/core/java/com/android/server/wm/ActivityMetricsLogger.java
+ */
+message AppCompatStateChanged {
+    // UID of the package whose state changed.
+    optional int32 uid = 1 [(is_uid) = true];
+
+    enum State {
+        UNKNOWN = 0;
+        // The app is not visible or has been closed.
+        NOT_VISIBLE = 1;
+        // The app’s bounds aren’t letterboxed.
+        NOT_LETTERBOXED = 2;
+        // The app’s bounds are letterboxed because of size-compat-mode.
+        LETTERBOXED_FOR_SIZE_COMPAT_MODE = 3;
+        // The app’s bounds are letterboxed because of fixed orientation.
+        LETTERBOXED_FOR_FIXED_ORIENTATION = 4;
+        // The app’s bounds are letterboxed because of aspect ratio restrictions.
+        LETTERBOXED_FOR_ASPECT_RATIO = 5;
+    }
+
+    // The state that was entered.
+    optional State state = 2 [
+      (state_field_option).exclusive_state = true,
+      (state_field_option).nested = false];
+}
+
+/**
+ * Logs events reported for the Size Compat restart button of an app.
+ *
+ * Logged from:
+ *   frameworks/base/libs/WindowManager/Shell/src/com/android/wm/shell/ShellTaskOrganizer.java
+ */
+message SizeCompatRestartButtonEventReported {
+    // UID of the package that has the button.
+    optional int32 uid = 1 [(is_uid) = true];
+
+    enum Event {
+        UNKNOWN = 0;
+        APPEARED = 1;
+        CLICKED = 2;
+    }
+
+    // The event that was reported.
+    optional Event event = 2;
 }
 
 /**
@@ -6074,7 +6202,7 @@ message BlobOpened{
  * Logged from:
  *  frameworks/base/core/java/com/android/internal/jank/FrameTracker.java
  *
- * Next Tag: 38
+ * Next Tag: 39
  */
 message UIInteractionFrameInfoReported {
     enum InteractionType {
@@ -6116,6 +6244,7 @@ message UIInteractionFrameInfoReported {
         STATUS_BAR_APP_LAUNCH_FROM_CALL_CHIP = 35;
         PIP_TRANSITION = 36;
         WALLPAPER_TRANSITION = 37;
+        USER_SWITCH = 38;
     }
 
     optional InteractionType interaction_type = 1;
@@ -6305,6 +6434,80 @@ message DataUsageBytesTransfer {
     // network allocates a secondary 5G cell so telephony reports RAT = LTE along with NR state as
     // connected.
     optional bool is_nr_connected = 11;
+}
+
+/**
+ * Note: This is a copy from DataUsageBytesTransfer and add a metered field.
+ * TODO: DataUsageBytesTransfer should be eventually replaced with DataUsageBytesTransferV2.
+ *
+ * Used for pull network statistics via mobile|wifi networks, and sliced by interesting dimensions.
+ * Note that the data is expected to be sliced into more dimensions in future. In other words,
+ * the caller must not assume any row of data is one full report when filtering with a set of
+ * matching conditions, because future data may represent with multiple rows what is currently
+ * represented by one.
+ * To avoid being broken by future slicing, callers must take care to aggregate rows even if they
+ * query all the existing columns.
+ *
+ * Pulled from:
+ *   StatsPullAtomService (using NetworkStatsService to get NetworkStats)
+ */
+message DataUsageBytesTransferV2 {
+    // State of this record. Should be NetworkStats#SET_DEFAULT or NetworkStats#SET_FOREGROUND to
+    // indicate the foreground state, or NetworkStats#SET_ALL to indicate the record is for all
+    // states combined, not including debug states. See NetworkStats#SET_*.
+    optional int32 state = 1;
+
+    optional int64 rx_bytes = 2;
+
+    optional int64 rx_packets = 3;
+
+    optional int64 tx_bytes = 4;
+
+    optional int64 tx_packets = 5;
+
+    // Radio Access Technology (RAT) type of this record, should be one of
+    // TelephonyManager#NETWORK_TYPE_* constants, or NetworkTemplate#NETWORK_TYPE_ALL to indicate
+    // the record is for all rat types combined.
+    optional int32 rat_type = 6;
+
+    // Mcc/Mnc read from sim if the record is for a specific subscription, null indicates the
+    // record is combined across subscriptions.
+    optional string sim_mcc = 7;
+    optional string sim_mnc = 8;
+
+    // Allows mobile virtual network operators (MVNOs) to be identified with individual IDs.
+    // See TelephonyManager#getSimCarrierId.
+    optional int32 carrier_id = 9;
+
+    // Enumeration of opportunistic states with an additional DSS_ALL state indicates the record is
+    // combined regardless of the boolean value in its field.
+    enum DataSubscriptionState {
+        DSS_UNKNOWN = 0; // For server side backward compatibility.
+        DSS_ALL = 1;
+        DSS_OPPORTUNISTIC = 2;
+        DSS_NOT_OPPORTUNISTIC = 3;
+    }
+    // Mark whether the subscription is an opportunistic data subscription, and ALL indicates the
+    // record is combined across opportunistic data subscriptions.
+    // See {@link SubscriptionManager#setOpportunistic}.
+    optional DataSubscriptionState opportunistic_data_sub = 10;
+
+    // Indicate whether NR is connected, server side could use this with RAT type to determine if
+    // the record is for 5G NSA (Non Stand Alone) mode, where the primary cell is still LTE and
+    // network allocates a secondary 5G cell so telephony reports RAT = LTE along with NR state as
+    // connected.
+    optional bool is_nr_connected = 11;
+
+    // Enumeration of metered states.
+    enum MeteredState {
+        METERED_UNKNOWN = 0;
+        METERED_ALL = 1;
+        METERED_NO = 2;
+        METERED_YES = 3;
+    }
+    // Mark the reported data is metered or non-metered, and METERED_ALL indicates the record is
+    // combined across metered data.
+    optional MeteredState metered = 12;
 }
 
 /**
@@ -7767,6 +7970,7 @@ message ContentCaptureServiceEvents {
         DATA_SHARE_ERROR_SERVICE_PIPE_FAIL = 13;
         DATA_SHARE_ERROR_CONCURRENT_REQUEST = 14;
         DATA_SHARE_ERROR_TIMEOUT_INTERRUPTED = 15;
+        ON_REMOTE_SERVICE_DIED = 16;
     }
     optional Event event = 1;
     // component/package of content capture service.
@@ -8288,6 +8492,52 @@ message NetworkDnsEventReported {
 
     // The sample rate of DNS stats (to statsd) is 1/sampling_rate_denom.
     optional int32 sampling_rate_denom = 9;
+}
+
+/**
+ * The NetworkDnsHandshakeReported message describes a DoT or DoH handshake operation along with
+ * its result, cause, network latency, TLS version, etc.
+ *
+ */
+message NetworkDnsHandshakeReported {
+  optional android.stats.dnsresolver.Protocol protocol = 1;
+
+  optional android.stats.dnsresolver.HandshakeResult result = 2;
+
+  optional android.stats.dnsresolver.HandshakeCause cause = 3;
+
+  optional android.stats.dnsresolver.NetworkType network_type = 4;
+
+  optional android.stats.dnsresolver.PrivateDnsModes private_dns_mode = 5;
+
+  // The latency in microseconds of the entire handshake operation.
+  optional int32 latency_micros = 6;
+
+  // Sent packets in bytes.
+  optional int32 bytes_sent = 7;
+
+  // Received packets in bytes.
+  optional int32 bytes_received = 8;
+
+  // Number of round-trips.
+  optional int32 round_trips = 9;
+
+  // True if TLS session cache hit.
+  optional bool tls_session_cache_hit = 10;
+
+  // 2 = TLS 1.2, 3 = TLS 1.3
+  optional int32 tls_version = 11;
+
+  // True if the handshake requires verifying the private DNS provider hostname.
+  optional bool hostname_verification = 12;
+
+  // Only present when protocol = PROTO_DOH.
+  optional int32 quic_version = 13;
+
+  optional int32 server_index = 14;
+
+  // The sampling-rate of this event is 1/sampling_rate_denom.
+  optional int32 sampling_rate_denom = 15;
 }
 
 /**
@@ -9011,7 +9261,75 @@ message DebugFailingElapsedClock {
 /** Logs System UI bubbles event changed.
  *
  * Logged from:
- *     frameworks/base/packages/SystemUI/src/com/android/systemui/bubbles
+ *     frameworks/base/libs/WindowManager/Shell/src/com/android/wm/shell/splitscreen
+ */
+message SplitscreenUIChanged {
+    // User interactions with splitscreen
+    enum Action {
+        UNKNOWN_ACTION = 0;
+        ENTER = 1;
+        EXIT = 2;
+        APP_CHANGE = 3;
+        RESIZE = 4;
+        SWAP = 5;
+    }
+
+    // The physical side on the device of the split
+    enum Position {
+        UNKNOWN_POSITION = 0;
+        LEFT = 1;
+        RIGHT = 2;
+        TOP = 3;
+        BOTTOM = 4;
+    }
+
+    // The reason for entering splitscreen
+    enum EnterReason {
+        UNKNOWN_ENTER = 0;
+        OVERVIEW = 1;
+        DRAG_LEFT = 2;
+        DRAG_TOP = 3;
+        DRAG_RIGHT = 4;
+        DRAG_BOTTOM = 5;
+    }
+
+    // The reason for exiting splitscreen
+    enum ExitReason {
+        UNKNOWN_EXIT = 0;
+        DRAG_DIVIDER = 1;
+        RETURN_HOME = 2;
+        SCREEN_LOCKED = 3;
+        SCREEN_LOCKED_SHOW_ON_TOP = 4;
+        DEVICE_FOLDED = 5;
+        ROOT_TASK_VANISHED = 6;
+        APP_FINISHED = 7;
+        APP_DOES_NOT_SUPPORT_MULTIWINDOW = 8;
+    }
+
+    // The event action
+    optional Action action = 1;
+    // What triggered splitscreen (if the action is ENTER)
+    optional EnterReason enter_reason = 2;
+    // What triggered leaving splitscreen (if the action is EXIT)
+    optional ExitReason exit_reason = 3;
+    // The ratio of split between the main/side stages
+    optional float split_ratio = 4;
+    // Data about the main stage in split
+    optional Position main_stage_position = 5;
+    optional int32 main_stage_uid = 6 [(is_uid) = true];
+    // Data about the side stage in split
+    optional Position side_stage_position = 7;
+    optional int32 side_stage_uid = 8 [(is_uid) = true];
+    // The drag session id (if the enter_trigger was DRAG)
+    optional int32 drag_instance_id = 9;
+    // An identifier used to identify a splitscreen session
+    optional int32 instance_id = 10;
+}
+
+/** Logs System UI bubbles event changed.
+ *
+ * Logged from:
+ *     frameworks/base/libs/WindowManager/Shell/src/com/android/wm/shell/bubbles
  */
 message BubbleUIChanged {
 
@@ -9213,30 +9531,74 @@ message MediaCodecReported {
     optional string package_name = 2;
     optional int64 package_version_code = 3;
     optional int64 media_apex_version = 4;
+    // The name of the codec.
+    // eg. `OMX.google.aac.decoder`
     optional string codec = 5;
+    // The mime type. e.g. "audio/vorbis"
     optional string mime = 6;
+    // The codec mode. i.e. video or audio.
     optional string mode = 7;
+    // 1 if this is an encoder, 0 if this is a decoder.
     optional int32 encoder = 8;
+    // 0, 1
     optional int32 secure = 9;
+    // The video width in pixels.
     optional int32 width = 10;
+    // The video height in pixels.
     optional int32 height = 11;
+    // The rotation of the video in degrees
+    // 0, 90, 180, 270
     optional int32 rotation = 12;
+    // 1 if the codec uses crypto/drm, 0 otherwise.
     optional int32 crypto = 13;
+    // The codec profile. The values are dependent on the codec type.
+    // 0..n
     optional int32 profile = 14;
+    // The coding level. The values are dependent on the codec type.
+    // 0..n
     optional int32 level = 15;
+    // The maximum allowed width during a particular codec session.
+    // 0..n
     optional int32 max_width = 16;
+    // The maximum allowed height during a particular codec session.
+    // 0..n
     optional int32 max_height = 17;
+    // Indicating which error condition caused the codec to reset to an
+    // uninitialized state.
     optional int32 error_code = 18;
+    // The error state.
+    // The emitted values are descriptive:  UNINITIALIZED, INITIALIZING,
+    // INITIALIZED, CONFIGURING, CONFIGURED, STARTING, STARTED, FLUSHING, FLUSHED,
+    // STOPPING, and RELEASING.
+    // In the event of an internal codec error setting the state outside of these
+    // values, the invalid value will be encoded as a string (e.g., “17”).
     optional string error_state = 19;
+    // The max latency in us.
+    // The latency is from the time when the MediaCodec sends the ‘raw’ frame to
+    // the media codec service to when the decoded frame arrives back in
+    // MediaCodec’s possession.
     optional int64 latency_max = 20;
+    // The min latency in us.
     optional int64 latency_min = 21;
+    // The average latency in us.
     optional int64 latency_avg = 22;
+    // The number of buffers included in the avg/min/max calculation above.
     optional int64 latency_count = 23;
+    // The number of packets received back from the code where a latency could not
+    // be determined, and therefore they aren't included in the avg/min/max
+    // calculations above.
     optional int64 latency_unknown = 24;
+    // Error returned by queueInputBuffer.
     optional int32 queue_input_buffer_error = 25;
+    // Error returned by queueSecureInputBuffer.
     optional int32 queue_secure_input_buffer_error = 26;
+    // These modes are primarily for videos.
+    // CQ = constant quality
+    // CBR = constant bit rate
+    // VBR = variable bitrate
     optional string bitrate_mode = 27;
     optional int32 bitrate = 28;
+    // 0..n
     optional int64 lifetime_millis = 29;
     optional int64 playback_duration_seconds = 30;
     optional string log_session_id = 31;
@@ -11390,7 +11752,7 @@ message AppSearchOptimizeStatsReported {
  * stats pushed from:
  *   frameworks/base/apex/appsearch/service/java/com/android/server/appsearch/AppSearchManagerService.java
  *
- * Next tag: 13
+ * Next tag: 20
  */
 message AppSearchSetSchemaStatsReported {
     // The sampling interval for this specific type of stats
@@ -11432,28 +11794,29 @@ message AppSearchSetSchemaStatsReported {
     // Number of backwards-incompatible schema type changes
     optional int32 backwards_incompatible_type_change_count = 11;
 
-    // Stores schema migration info if migration is executed with setting schema
-    optional SchemaMigrationStats schema_migration_stats = 12
-        [(android.os.statsd.log_mode) = MODE_BYTES];
-}
+    // Whether schema migration is executed during setting schema
+    optional bool has_schema_migration = 12;
 
-/**
- * Logs detailed stats for schema migration in AppSearch
- */
-message SchemaMigrationStats {
-    optional int32 get_schema_latency_millis = 1;
+    // Overall time used for getting schema during schema migration
+    optional int32 schema_migration_get_schema_latency_millis = 13;
 
-    optional int32 query_and_transform_latency_millis = 2;
+    // Overall time used for querying and transforming documents during schema migration
+    optional int32 schema_migration_query_and_transform_latency_millis = 14;
 
-    optional int32 first_set_schema_latency_millis = 3;
+    // Overall time used for first setSchema during schema migration
+    optional int32 schema_migration_first_set_schema_latency_millis = 15;
 
-    optional int32 second_set_schema_latency_millis = 4;
+    // Overall time used for second setSchema during schema migration
+    optional int32 schema_migration_second_set_schema_latency_millis = 16;
 
-    optional int32 save_document_latency_millis = 5;
+    // Overall time used for saving documents during schema migration
+    optional int32 schema_migration_save_document_latency_millis = 17;
 
-    optional int32 migrated_document_count = 6;
+    // Number of migrated documents during schema migration
+    optional int32 schema_migration_migrated_document_count = 18;
 
-    optional int32 saved_document_count = 7;
+    // Number of saved documents during schema migration
+    optional int32 schema_migration_saved_document_count = 19;
 }
 
 // Reports information in external/icing/proto/icing/proto/storage.proto#DocumentStorageInfoProto
@@ -13426,6 +13789,9 @@ message PinStorageEvent {
 
     // Number of PINs stored or discarded.
     optional int32 number_of_pins = 2;
+
+    // The caller package name
+    optional string package_name = 3;
 }
 
 /**
@@ -13895,6 +14261,69 @@ message AccessibilityServiceReported {
     // The definition of the service status.
     // From frameworks/proto_logging/stats/enums/stats/accessibility/accessibility_enums.proto.
     optional android.stats.accessibility.ServiceStatus service_status = 2;
+}
+
+/**
+ * Logs when accessibility floating menu changed its position by user.
+ *
+ * Logged from:
+ *   frameworks/base/packages/SystemUI/src/com/android/systemui/accessibility/floatingmenu
+ */
+message AccessibilityFloatingMenuUIChanged {
+    // Normalized screen position of the accessibility floating menu. The range is between 0 and 1.
+    optional float normalized_x_position = 1;
+    optional float normalized_y_position = 2;
+
+    enum Orientation {
+        UNKNOWN = 0;
+        PORTRAIT = 1;
+        LANDSCAPE = 2;
+    }
+    // Orientation of the device when accessibility floating menu changed.
+    optional Orientation orientation = 3;
+}
+
+/**
+ * Pulls accessibility shortcuts status.
+ *
+ * Pulled from:
+ *   StatsPullAtomService
+ */
+message AccessibilityShortcutStats {
+    // The definition of the accessibility software shortcut.
+    // From frameworks/proto_logging/stats/enums/stats/accessibility/accessibility_enums.proto.
+    optional android.stats.accessibility.ShortcutType software_shortcut_type = 1;
+    // Number of accessibility services in accessibility software shortcut.
+    optional int32 software_shortcut_service_num = 2;
+
+    // The definition of the accessibility hardware shortcut.
+    // From frameworks/proto_logging/stats/enums/stats/accessibility/accessibility_enums.proto.
+    optional android.stats.accessibility.ShortcutType hardware_shortcut_type = 3;
+    // Number of accessibility services in accessibility hardware shortcut.
+    optional int32 hardware_shortcut_service_num = 4;
+
+    // The definition of the accessibility gesture shortcut.
+    // From frameworks/proto_logging/stats/enums/stats/accessibility/accessibility_enums.proto.
+    optional android.stats.accessibility.ShortcutType gesture_shortcut_type = 5;
+    // Number of accessibility services in accessibility gesture shortcut.
+    optional int32 gesture_shortcut_service_num = 6;
+}
+
+/**
+ * Pulls accessibility floating menu status.
+ *
+ * Pulled from:
+ *   StatsPullAtomService
+ */
+message AccessibilityFloatingMenuStats {
+    // Size of the accessibility floating menu.
+    optional int32 size = 1;
+    // Icon shape of the accessibility floating menu.
+    optional int32 icon_type = 2;
+    // Whether the accessibility floating menu is enable auto fade ability.
+    optional bool fade_enabled = 3;
+    // Opacity of the accessibility floating menu. The range is between 0 and 1.
+    optional float opacity = 4;
 }
 
 /**
@@ -16373,7 +16802,7 @@ message TimeZoneDetectorState {
  */
 message LocationTimeZoneProviderStateChanged {
     // The index of the provider (primary = 0, secondary = 1)
-    optional int32 provider_index = 1;
+    optional int32 provider_index = 1 [(state_field_option).primary_field = true];
 
     enum State {
         // A placeholder for unknown values.
@@ -16399,7 +16828,7 @@ message LocationTimeZoneProviderStateChanged {
     }
 
     // The state of the provider.
-    optional State state = 2;
+    optional State state = 2 [(state_field_option).exclusive_state = true];
 }
 
 /*
