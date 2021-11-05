@@ -17179,6 +17179,9 @@ message TimeZoneDetectorState {
     // The latest geo-derived suggestion (non-persistent).
     optional MetricsTimeZoneSuggestion latest_geo_suggestion = 10
             [(log_mode) = MODE_BYTES];
+
+    // True if fallback to telephony time zone detection is supported on the device.
+    optional bool telephony_time_zone_fallback_supported = 11;
 }
 
 /*
