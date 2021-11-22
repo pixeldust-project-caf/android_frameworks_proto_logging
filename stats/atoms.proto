@@ -17218,6 +17218,13 @@ message TimeZoneDetectorState {
 
     // True if enhanced metrics collection is enabled.
     optional bool enhanced_metrics_collection_enabled = 13;
+
+    // True if the device may run geolocation time zone detection in the
+    // background. This is the raw server flag value, not the value after
+    // considering other state like the user's "use location" setting that also
+    // affects runtime behavior. See LocationTimeZoneProviderController for
+    // details.
+    optional bool geo_detection_run_in_background_enabled = 14;
 }
 
 /*
