@@ -614,6 +614,7 @@ message Atom {
         TextClassifierDownloadWorkScheduled text_classifier_download_work_scheduled = 406 [(module) = "textclassifier"];
         TextClassifierDownloadWorkCompleted text_classifier_download_work_completed = 407 [(module) = "textclassifier"];
         ClipboardWiped clipboard_wiped = 408 [(module) = "framework"];
+        VmCreationRequested vm_creation_requested = 409 [(module) = "virtualizationservice"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -15713,6 +15714,26 @@ message TextClassifierDownloadWorkCompleted {
 
     optional int64 work_scheduled_to_started_duration_millis = 4;
     optional int64 work_started_to_ended_duration_millis = 5;
+}
+
+/**
+ * Logs telemetry for Android Virtualization framework
+ *
+ * On CreateVM requests, an atom is pushed that records what hypervisor is being used.
+ * the protected status of the new VM, and if the VM creation succeeded
+ * Logged from: packages/modules/Virtualization/
+ */
+message VmCreationRequested {
+    enum Hypervisor {
+        UNKNOWN = 0;
+        PKVM = 1;
+        OTHER = 2;
+    }
+    optional Hypervisor hypervisor = 1;
+    // Is the VM started in protected mode?
+    optional bool protected = 2;
+    // Did the VM creation succeed
+    optional bool success = 3;
 }
 
 /**
