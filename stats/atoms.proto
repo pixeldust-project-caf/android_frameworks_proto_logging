@@ -6362,6 +6362,7 @@ message UIActionLatencyReported {
         ACTION_ROTATE_SCREEN_SENSOR = 11;
         ACTION_LOCKSCREEN_UNLOCK = 12;
         ACTION_USER_SWITCH = 13;
+        ACTION_SWITCH_DISPLAY_UNFOLD = 14;
     }
 
     optional ActionType action = 1;
