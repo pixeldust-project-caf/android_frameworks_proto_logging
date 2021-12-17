@@ -31,6 +31,7 @@ import "frameworks/proto_logging/stats/enums/bluetooth/enums.proto";
 import "frameworks/proto_logging/stats/enums/bluetooth/hci/enums.proto";
 import "frameworks/proto_logging/stats/enums/bluetooth/hfp/enums.proto";
 import "frameworks/proto_logging/stats/enums/bluetooth/smp/enums.proto";
+import "frameworks/proto_logging/stats/enums/contexthub/enums.proto";
 import "frameworks/proto_logging/stats/enums/debug/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/biometrics/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/sensor/assist/enums.proto";
@@ -509,7 +510,7 @@ message Atom {
         MediametricsMediaParserReported mediametrics_mediaparser_reported = 316;
         TlsHandshakeReported tls_handshake_reported = 317 [(module) = "conscrypt"];
         TextClassifierApiUsageReported text_classifier_api_usage_reported = 318  [(module) = "textclassifier"];
-        CarWatchdogKillStatsReported car_watchdog_kill_stats_reported = 319 [(module) = "carwatchdogd"];
+        CarWatchdogKillStatsReported car_watchdog_kill_stats_reported = 319 [(module) = "car"];
         MediametricsPlaybackReported mediametrics_playback_reported = 320 [(module) = "media_metrics"];
         MediaNetworkInfoChanged media_network_info_changed = 321 [(module) = "media_metrics"];
         MediaPlaybackStateChanged media_playback_state_changed = 322 [(module) = "media_metrics"];
@@ -565,7 +566,7 @@ message Atom {
         OdrefreshReported odrefresh_reported = 366 [(module) = "art"];
         AlarmBatchDelivered alarm_batch_delivered = 367 [(module) = "framework"];
         AlarmScheduled alarm_scheduled = 368 [(module) = "framework"];
-        CarWatchdogIoOveruseStatsReported io_overuse_stats_reported = 369 [(module) = "carwatchdogd"];
+        CarWatchdogIoOveruseStatsReported car_watchdog_io_overuse_stats_reported = 369 [(module) = "car"];
         UserLevelHibernationStateChanged user_level_hibernation_state_changed = 370 [(module) = "framework"];
         AppSearchInitializeStatsReported app_search_initialize_stats_reported = 371 [(module) = "appsearch"];
         AppSearchQueryStatsReported app_search_query_stats_reported = 372 [(module) = "appsearch"];
@@ -600,6 +601,11 @@ message Atom {
             [(module) = "neuralnetworks"];
         NeuralNetworksExecutionFailed neuralnetworks_execution_failed = 397
             [(module) = "neuralnetworks"];
+        ContextHubBooted context_hub_booted = 398 [(module) = "contexthub"];
+        ContextHubRestarted context_hub_restarted = 399 [(module) = "contexthub"];
+        ContextHubLoadedNanoappSnapshotReported context_hub_loaded_nanoapp_snapshot_reported = 400
+            [(module) = "contexthub"];
+        ChreCodeDownloadTransacted chre_code_download_transacted = 401 [(module) = "contexthub"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -15575,10 +15581,11 @@ message TextClassifierDownloadReported {
 /**
  * Logs the current state of an application/process before it is killed.
  *
- * Keep in sync with proto file at packages/services/Car/cpp/watchdog/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Pushed from:
- *  packages/services/Car/cpp/watchdog/server/src/StatsReporter.cpp
+ *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogKillStatsReported {
     // Linux process uid for the package.
@@ -15622,10 +15629,11 @@ message CarWatchdogKillStatsReported {
 /**
  * Logs the I/O overuse stats for an application on detecting I/O overuse.
  *
- * Keep in sync with proto file at packages/services/Car/cpp/watchdog/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Pushed from:
- *  packages/services/Car/cpp/watchdog/server/src/StatsReporter.cpp
+ *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogIoOveruseStatsReported {
     // Linux process uid for the package.
@@ -15638,15 +15646,17 @@ message CarWatchdogIoOveruseStatsReported {
 /**
  * Logs I/O overuse stats for a package.
  *
- * Keep in sync with proto file at packages/services/Car/cpp/watchdog/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Logged from:
- *  packages/services/Car/cpp/watchdog/server/src/StatsReporter.cpp
+ *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogIoOveruseStats {
     enum Period {
-        DAILY = 0;
-        WEEKLY = 1;
+        UNKNOWN_PERIOD = 0;
+        DAILY = 1;
+        WEEKLY = 2;
     }
 
     // Threshold and usage stats period.
@@ -15665,10 +15675,11 @@ message CarWatchdogIoOveruseStats {
 /**
  * Logs bytes attributed to each application and system states.
  *
- * Keep in sync with proto file at packages/services/Car/cpp/watchdog/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Logged from:
- *  packages/services/Car/cpp/watchdog/server/src/StatsReporter.cpp
+ *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogPerStateBytes {
     // Number of bytes attributed to the application foreground.
@@ -15684,10 +15695,11 @@ message CarWatchdogPerStateBytes {
 /**
  * Logs each CarWatchdogProcessStat in CarWatchdogProcessStats.
  *
- * Keep in sync with proto file at packages/services/Car/cpp/watchdog/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Logged from:
- *  packages/services/Car/cpp/watchdog/server/src/StatsReporter.cpp
+ *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogProcessStats {
     // Records the stats of the processes owned by an application.
@@ -15697,17 +15709,18 @@ message CarWatchdogProcessStats {
 /**
  * Logs a process's stats.
  *
- * Keep in sync with proto file at packages/services/Car/cpp/watchdog/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Logged from:
- *  packages/services/Car/cpp/watchdog/server/src/StatsReporter.cpp
+ *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogProcessStat {
     // Command name of the process.
     optional string process_name = 1;
 
     // Process uptime.
-    optional uint64 uptime_milliseconds = 2;
+    optional uint64 uptime_millis = 2;
 
     // Number of major page faults caused by the process and its children.
     optional uint64 major_page_faults = 3;
@@ -15728,6 +15741,9 @@ message CarWatchdogProcessStat {
 /**
  * Logs total I/O usage summary for all applications and services running in the system.
  *
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
+ *
  * Pulled from:
  *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
@@ -15738,6 +15754,9 @@ message CarWatchdogSystemIoUsageSummary {
 
 /**
  * Logs I/O usage summary for an UID.
+ *
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Pulled from:
  *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
@@ -15753,7 +15772,8 @@ message CarWatchdogUidIoUsageSummary {
 /**
  * Logs I/O usage summary for a time period.
  *
- * Keep in sync with proto file at packages/services/Car/service/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Pulled from:
  *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
@@ -15762,23 +15782,26 @@ message CarWatchdogIoUsageSummary {
     // Summary event time period.
     optional CarWatchdogEventTimePeriod event_time_period = 1;
 
-    // Daily I/O usage summary for the period.
+    // Daily I/O usage summary for the period. Logs summary entries only for days with I/O usage.
+    // The entries are ordered beginning from the event_time_period.start_time_millis.
     repeated CarWatchdogDailyIoUsageSummary daily_io_usage_summary = 2;
 }
 
 /**
  * Logs a car watchdog event's time period.
  *
- * Keep in sync with proto file at packages/services/Car/service/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Pulled from:
  *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
  */
 message CarWatchdogEventTimePeriod {
     enum Period {
-        WEEKLY = 0;
-        BIWEEKLY = 1;
-        MONTHLY = 2;
+        UNKNOWN_PERIOD = 0;
+        WEEKLY = 1;
+        BIWEEKLY = 2;
+        MONTHLY = 3;
     }
 
     // Start time of the event in milliseconds since epoch.
@@ -15791,7 +15814,8 @@ message CarWatchdogEventTimePeriod {
 /**
  * Logs daily I/O usage summary.
  *
- * Keep in sync with proto file at packages/services/Car/service/proto
+ * Keep in sync with proto file at
+ * packages/services/Car/service/src/com/android/car/watchdog/proto/atoms.proto
  *
  * Pulled from:
  *  packages/services/Car/service/src/com/android/car/watchdog/WatchdogPerfHandler.java
@@ -15801,7 +15825,7 @@ message CarWatchdogDailyIoUsageSummary {
     optional CarWatchdogPerStateBytes written_bytes = 1;
 
     // Total uptime for the system or service or application during a day.
-    optional uint64 uptime_mills = 2;
+    optional uint64 uptime_millis = 2;
 
     // Total disk I/O overuses during a day.
     optional int32 overuse_count = 3;
@@ -17682,4 +17706,63 @@ message NeuralNetworksExecutionFailed {
 
     // How many times this atom occurred locally before being pushed.
     optional int32 count = 14;
+}
+
+/**
+ * Logs boot-time info for a Context Hub.
+ */
+message ContextHubBooted {
+  // The amount of time it took the framework to connect to CHRE/Context Hub HAL
+  // since the framework has booted.
+  optional int64 boot_time_nanos = 1;
+
+  // The number of Context Hub instances found on this system.
+  optional int32 num_context_hubs = 2;
+}
+
+/**
+ * Logs Context Hub restart events (e.g. crashes).
+ */
+message ContextHubRestarted {
+  // The duration of time between the last time Context Hub restart and this event.
+  // This should use the SystemClock.elapsedRealTime() API.
+  optional int64 elapsed_time_millis_since_boot = 1;
+
+  // The ID of the Context Hub that has restarted (zero-indexed).
+  optional int32 context_hub_id = 2;
+}
+
+/**
+ * Logs a snapshot of all the nanoapps loaded on this Context Hub.
+ */
+message ContextHubLoadedNanoappSnapshotReported {
+  // The ID of the Context Hub the snapshot is for.
+  optional int32 context_hub_id = 1;
+
+  // The nanoapp this snapshot is for. The nanoapp ID is the 64-bit unique identifier
+  // for the application, and the version is the semantic versioning (https://semver.org)
+  // used to determine the software version.
+  optional int64 nanoapp_id = 2;
+  optional int32 nanoapp_version = 3;
+}
+
+/**
+ * Logs details of a dynamic CHRE nanoapp code download transaction.
+ */
+message ChreCodeDownloadTransacted {
+  enum Type {
+    TYPE_UNKNOWN = 0;
+    TYPE_LOAD = 1;
+    TYPE_UNLOAD = 2;
+  }
+
+  // The ID/version of the nanoapp this code download was for.
+  optional int64 nanoapp_id = 1;
+  optional int32 nanoapp_version = 2;
+
+  // The type of code download transaction.
+  optional Type transaction_type = 3;
+
+  // The result of this transaction.
+  optional android.hardware.location.ContextHubTransactionResult transaction_result = 4;
 }
