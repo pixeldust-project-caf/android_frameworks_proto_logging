@@ -986,6 +986,11 @@ enum Action {
     // CATEGORY: SETTINGS
     // OS: T
     ACTION_USER_SUPERVISED_ADD = 1786;
+
+    // ACTION: Settings > System > Gestures > Quick tap for actions > Toggle flashlight
+    // CATEGORY: SETTINGS
+    // OS: T
+    ACTION_COLUMBUS_ACTION_FLASHLIGHT = 1787;
 }
 
 /**
