@@ -14594,6 +14594,18 @@ message AudioPowerUsageDataReported {
         RECORD_TYPE = 7;  // other recording
     }
     optional AudioType type = 4;
+
+    // Minimum volume duration of the audio in seconds
+    optional int32 minimum_volume_duration_secs = 5;
+
+    // Minimum volume (0 ... 1.0)
+    optional float minimum_volume = 6;
+
+    // Maximum volume duration of the audio in seconds
+    optional int32 maximum_volume_duration_secs = 7;
+
+    // Maximum volume (0 ... 1.0)
+    optional float maximum_volume = 8;
 }
 
 /**
