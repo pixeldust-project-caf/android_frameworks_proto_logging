@@ -18859,10 +18859,10 @@ message NearbyDeviceScanStateChanged {
 message ApplicationLocalesChanged {
     // The uid which invoked this update. The locales for an application
     // could be changed from the in-app picker OR from the settings UI.
-    optional int32 calling_uid = 1;
+    optional int32 calling_uid = 1 [(is_uid) = true];
 
     // The uid for which the locale change is being done.
-    optional int32 target_uid = 2;
+    optional int32 target_uid = 2 [(is_uid) = true];
 
     // The new locales for the target package. A comma separated list of BCP 47
     // locale identifiers, compatible with LocaleList#forLanguageTags.
