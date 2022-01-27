@@ -3280,6 +3280,12 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: T
     REBOOT_WITH_MTE = 1913;
+
+    // OPEN: Settings > System > Developer options > Enable freeform windows > Reboot dialog
+    // OPEN: Settings > System > Developer options > Force desktop mode > Reboot dialog
+    // CATEGORY: SETTINGS
+    // OS: T
+    REBOOT_CONFIRMATION_DIALOG = 1914;
 }
 
 // Battery Saver schedule types.
