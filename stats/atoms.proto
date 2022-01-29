@@ -26,6 +26,7 @@ import "frameworks/proto_logging/stats/enums/app/job/enums.proto";
 import "frameworks/proto_logging/stats/enums/app/settings_enums.proto";
 import "frameworks/proto_logging/stats/enums/app/media_output_enum.proto";
 import "frameworks/proto_logging/stats/enums/app/tvsettings_enums.proto";
+import "frameworks/proto_logging/stats/enums/app/wearsettings_enums.proto";
 import "frameworks/proto_logging/stats/enums/bluetooth/a2dp/enums.proto";
 import "frameworks/proto_logging/stats/enums/bluetooth/enums.proto";
 import "frameworks/proto_logging/stats/enums/bluetooth/hci/enums.proto";
@@ -634,6 +635,7 @@ message Atom {
         VBMetaDigestReported vbmeta_digest_reported = 420 [(module) = "framework"];
         ApexInfoGathered apex_info_gathered = 421 [(module) = "framework"];
         PvmInfoGathered pvm_info_gathered = 422 [(module) = "framework"];
+        WearSettingsUIInteracted wear_settings_ui_interacted = 423 [(module) = "wear_settings"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -19096,4 +19098,15 @@ message SignedPartitionInfo {
     optional string partition_name = 1;
     // the hex encoded SHA256 digest of the partition image file
     optional string sha256_digest = 2;
+}
+
+/**
+ * Logs when Wear Settings UI is interacted with
+ */
+message WearSettingsUIInteracted {
+    /** The UI action category */
+    optional android.app.wearsettings.Action action = 1;
+
+    /** The ID of the entry that the users actioned on. */
+    optional android.app.wearsettings.ItemId item_id = 2;
 }
