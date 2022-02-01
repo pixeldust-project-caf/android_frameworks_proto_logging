@@ -5122,6 +5122,12 @@ message BiometricAcquired {
     optional bool debug = 8;
     // The ID of the biometric sensor associated with this action.
     optional int32 sensor_id = 9;
+    // The ID of the session this event occurred in (if any)
+    optional int32 session_id = 10;
+    // The type of session (i.e. CUJ)
+    optional android.hardware.biometrics.SessionTypeEnum session_type = 11;
+    // If the AoD was on when this event occurred.
+    optional bool is_aod = 12;
 }
 
 /**
@@ -5164,6 +5170,12 @@ message BiometricAuthenticated {
     optional int32 sensor_id = 9;
     // The ambient light lux when authenticated.
     optional float ambient_light_lux = 10;
+    // The ID of the session this event occurred in (if any)
+    optional int32 session_id = 11;
+    // The type of session (i.e. CUJ)
+    optional android.hardware.biometrics.SessionTypeEnum session_type = 12;
+    // If the AoD was on when this event occurred.
+    optional bool is_aod = 13;
 }
 
 /**
@@ -5195,6 +5207,12 @@ message BiometricErrorOccurred {
     optional int64 latency_millis = 9;
     // The ID of the biometric sensor associated with this action.
     optional int32 sensor_id = 10;
+    // The ID of the session this event occurred in (if any)
+    optional int32 session_id = 11;
+    // The type of session (i.e. CUJ)
+    optional android.hardware.biometrics.SessionTypeEnum session_type = 12;
+    // If the AoD was on when this event occurred.
+    optional bool is_aod = 13;
 }
 
 /**
