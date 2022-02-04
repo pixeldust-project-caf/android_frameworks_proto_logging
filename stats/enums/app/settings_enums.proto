@@ -981,6 +981,21 @@ enum Action {
     // CATEGORY: SETTINGS
     // OS: S
     FIELD_BATTERY_SAVER_PERCENTAGE_VALUE = 1785;
+
+    // ACTION: Settings > System > Multiple users > Add supervised user
+    // CATEGORY: SETTINGS
+    // OS: T
+    ACTION_USER_SUPERVISED_ADD = 1786;
+
+    // ACTION: Settings > System > Gestures > Quick tap for actions > Toggle flashlight
+    // CATEGORY: SETTINGS
+    // OS: T
+    ACTION_COLUMBUS_ACTION_FLASHLIGHT = 1787;
+
+    // ACTION: Settings > Display > Daydream ("Screen Saver")
+    // CATEGORY: SETTINGS
+    // OS: T
+    ACTION_DREAM_SELECT_TYPE = 1788;
 }
 
 /**
@@ -3255,6 +3270,11 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: T
     APPS_LOCALE_LIST = 1911;
+
+    // OPEN: Settings > Accessibility > Text and reading options
+    // CATEGORY: SETTINGS
+    // OS: T
+    ACCESSIBILITY_TEXT_READING_OPTIONS = 1912;
 }
 
 // Battery Saver schedule types.
