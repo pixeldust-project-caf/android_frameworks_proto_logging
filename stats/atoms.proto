@@ -35,11 +35,14 @@ import "frameworks/proto_logging/stats/enums/contexthub/enums.proto";
 import "frameworks/proto_logging/stats/enums/debug/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/biometrics/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/sensor/assist/enums.proto";
+import "frameworks/proto_logging/stats/enums/media/audio/enums.proto";
+import "frameworks/proto_logging/stats/enums/media/enums.proto";
 import "frameworks/proto_logging/stats/enums/nearby/enums.proto";
 import "frameworks/proto_logging/stats/enums/neuralnetworks/enums.proto";
 import "frameworks/proto_logging/stats/enums/net/enums.proto";
 import "frameworks/proto_logging/stats/enums/os/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/connectivity/data_stall_event.proto";
+import "frameworks/proto_logging/stats/enums/server/display/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/job/enums.proto";
 import "frameworks/proto_logging/stats/enums/server/location/enums.proto";
@@ -619,6 +622,12 @@ message Atom {
         NearbyDeviceScanStateChanged nearby_device_scan_state_changed = 410 [(module) = "nearby"];
         CameraCompatControlEventReported camera_compat_control_event_reported = 411 [(module) = "framework"];
         ApplicationLocalesChanged application_locales_changed = 412 [(module) = "framework"];
+        MediametricsAudioTrackStatusReported mediametrics_audiotrackstatus_reported = 413;
+        FoldStateDurationReported fold_state_duration_reported = 414 [(module) = "framework"];
+        LocationTimeZoneProviderControllerStateChanged location_time_zone_provider_controller_state_changed =
+            415 [(module) = "framework"];
+        DisplayHbmStateChanged display_hbm_state_changed = 416 [(module) = "framework"];
+        DisplayHbmBrightnessChanged display_hbm_brightness_changed = 417 [(module) = "framework"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -804,6 +813,7 @@ message Atom {
         PresenceNotifyEvent presence_notify_event = 10144 [(module) = "telephony"];
         GbaEvent gba_event = 10145 [(module) = "telephony"];
         PerSimStatus per_sim_status = 10146 [(module) = "telephony"];
+        GpuFreqTimeInStatePerUid gpu_freq_time_in_state_per_uid = 10147;
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
@@ -4705,6 +4715,8 @@ message ForegroundServiceStateChanged {
     optional int32 fgs_start_count = 13;
     // SHA-1 hashed short_name combined with ANDROID_ID.
     optional int32 short_name_hash = 14;
+    // Whether this FGS package had permission to notify the user.
+    optional bool fgs_has_notification_permission = 15;
 }
 
 /**
@@ -6307,7 +6319,7 @@ message BlobOpened{
  * Logged from:
  *  frameworks/base/core/java/com/android/internal/jank/FrameTracker.java
  *
- * Next Tag: 43
+ * Next Tag: 45
  */
 message UIInteractionFrameInfoReported {
     enum InteractionType {
@@ -6354,6 +6366,9 @@ message UIInteractionFrameInfoReported {
         SPLASHSCREEN_EXIT_ANIM = 40;
         SCREEN_OFF = 41;
         SCREEN_OFF_SHOW_AOD = 42;
+        ONE_HANDED_ENTER_TRANSITION = 43;
+        ONE_HANDED_EXIT_TRANSITION = 44;
+        UNFOLD_ANIM = 45;
     }
 
     optional InteractionType interaction_type = 1;
@@ -13785,7 +13800,8 @@ message DataCallSession {
  * Logs data stall recovery event
  *
  * Logged from:
- *   frameworks/opt/telephony/src/java/com/android/internal/telephony/dataconnection/DcTracker.java
+ *   frameworks/opt/telephony/src/java/com/android/internal/telephony/data/
+ *   DataStallRecoveryManager.java
  */
 message DataStallRecoveryReported {
     // Carrier ID of the SIM
@@ -13818,6 +13834,9 @@ message DataStallRecoveryReported {
 
     // The elapsed time between start of the data stall and result of current action.
     optional int32 duration_millis = 9;
+
+    // The data stall recovered reason. Available from Android T.
+    optional android.telephony.DataStallRecoveredReason reason = 10;
 }
 
 /**
@@ -14939,6 +14958,71 @@ message MediametricsAudioDeviceConnectionReported {
 }
 
 /**
+ * Logs the status of an AudioTrack operation.
+ *
+ * Logged from:
+ *   frameworks/av/services/mediametrics/AudioAnalytics.cpp
+ */
+message MediametricsAudioTrackStatusReported {
+    // The event (method) that the status is associated with (e.g. create, start, pause, etc.)
+    enum Event {
+        EVENT_UNKNOWN = 0;
+        EVENT_CREATE = 1;
+    }
+
+    // General status code for categorization of status.
+    optional android.media.Status status = 1;
+
+    // Status or error message, e.g. logcat.
+    optional string debug_message = 2;
+
+    // Supplemental status subcode for AudioTrack.
+    optional int32 sub_code = 3;
+
+    // Uid associated with track
+    optional int32 uid = 4 [(is_uid) = true];
+
+    // The AudioTrack event.
+    optional Event event = 5;
+
+    // Requested AudioTrack flags, with each flag bitwise ORed.
+    // One or more bits from system/media/audio/include/system/audio-hal-enums.h
+    // audio_output_flags_t
+    optional int32 flags = 6;
+
+    // An enumeration from system/media/audio/include/system/audio-hal-enums.h
+    // audio_content_type_t, representing the content type of the AudioTrack.
+    optional android.media.audio.ContentType content_type = 7;
+
+    // An enumeration from system/media/audio/include/system/audio-hal-enums.h
+    // audio_usage_t, representing the use case for the AudioTrack.
+    optional android.media.audio.Usage usage = 8;
+
+    // An enumeration from system/media/audio/include/system/audio-hal-enums.h
+    // audio_format_t, representing the encoding of the AudioTrack data.
+    optional android.media.audio.Encoding encoding = 9;
+
+    // Channel mask, with each channel position bitwise ORed.
+    // One or more bits from system/media/audio/include/system/audio-hal-enums.h
+    // audio_channel_mask_t, representing the channel configuration of AudioTrack data.
+    optional int64 channel_mask = 10;
+
+    // The size of the AudioTrack buffer in frames.
+    // If an error occurs during creation, this may be a small integer requested size
+    // as AudioFlinger is entitled to increase this as required.
+    optional int32 buffer_frame_count = 11;
+
+    // Sample rate in Hz.
+    optional int32 sample_rate = 12;
+
+    // Playback speed, nominal 1.f representing 1x.
+    optional float speed = 13;
+
+    // Playback pitch, nominal 1.f representing 1x.
+    optional float pitch = 14;
+}
+
+/**
  * Logs: i) creation of different types of cryptographic keys in the keystore,
  * ii) operations performed using the keys,
  * iii) attestation of the keys
@@ -15774,9 +15858,9 @@ message VmCreationRequested {
     }
     optional Hypervisor hypervisor = 1;
     // Is the VM started in protected mode?
-    optional bool protected = 2;
+    optional bool is_protected = 2;
     // Did the VM creation succeed
-    optional bool success = 3;
+    optional bool creation_succeeded = 3;
 }
 
 /**
@@ -16904,6 +16988,25 @@ message DeviceStateChanged {
     optional bool boot_state = 2;
 }
 
+/*
+ * Logged when device folded state changes.
+ *
+ * Logged from:
+ *     frameworks/base/packages/SystemUI/src/com/android/systemui/unfold/FoldStateLogger.kt
+ */
+message FoldStateDurationReported {
+    enum State {
+      UNKNOWN = 0;
+      OPEN = 1;
+      CLOSED = 2;
+      HALF_OPEN = 3;
+    }
+
+    optional State start_state = 1;
+    optional State end_state = 2;
+    optional int64 duration_millis = 3;
+}
+
 /**
  * This metric is collected at the end of playback
  * as a pulled atom.
@@ -17035,16 +17138,7 @@ message MediaDrmActivityInfo {
 }
 
 /*
- * An obfuscated, canonical form time zone suggestion for metrics use.
- *
- * The suggestion's time zone IDs (which relate to location) are obfuscated by
- * mapping them to an ordinal. When the ordinal is assigned consistently across
- * several objects (i.e. so the same time zone ID is always mapped to the same
- * ordinal), this allows comparisons between those objects. For example, we can
- * answer "did these two suggestions agree?", "does the suggestion match the
- * device's current time zone?", without leaking knowledge of location. Ordinals
- * are also significantly more compact than full IANA TZDB IDs, albeit highly
- * unstable and of limited use.
+ * A canonical form time zone suggestion for metrics use.
  */
 message MetricsTimeZoneSuggestion {
     enum Type {
@@ -17057,7 +17151,26 @@ message MetricsTimeZoneSuggestion {
     // The ordinals for time zone(s) in the suggestion. Always empty for
     // UNCERTAIN, and can be empty for CERTAIN, for example when the device is in
     // a disputed area / on an ocean.
+    //
+    // The suggestion's time zone IDs (which relate to location) are obfuscated by
+    // mapping them to an ordinal. When the ordinal is assigned consistently across
+    // several objects (i.e. so the same time zone ID is always mapped to the same
+    // ordinal), this allows comparisons between those objects. For example, we can
+    // answer "did these two suggestions agree?", "does the suggestion match the
+    // device's current time zone?", without leaking knowledge of location. Ordinals
+    // are also significantly more compact than full IANA TZDB IDs, albeit unstable
+    // and of limited use.
     repeated int32 time_zone_ordinals = 2;
+
+    // The actual time zone ID(s) in the suggestion. Similar to time_zone_ordinals
+    // but contains the actual string IDs.
+    //
+    // This information is only captured / reported for some devices based on the
+    // value of a server side flag, i.e. it could be enabled for internal testers.
+    // Therefore the list can be empty even when time_zone_ordinals is populated.
+    //
+    // When enabled, see time_zone_ordinals for the expected number of values.
+    repeated string time_zone_ids = 3;
 }
 
 /*
@@ -17108,13 +17221,29 @@ message TimeZoneDetectorState {
     // The latest geo-derived suggestion (non-persistent).
     optional MetricsTimeZoneSuggestion latest_geo_suggestion = 10
             [(log_mode) = MODE_BYTES];
+
+    // True if fallback to telephony time zone detection is supported on the device.
+    optional bool telephony_time_zone_fallback_supported = 11;
+
+    // The device's current time zone ID (see MetricsTimeZoneSuggestion).
+    optional string device_time_zone_id = 12;
+
+    // True if enhanced metrics collection is enabled.
+    optional bool enhanced_metrics_collection_enabled = 13;
+
+    // True if the device may run geolocation time zone detection in the
+    // background. This is the raw server flag value, not the value after
+    // considering other state like the user's "use location" setting that also
+    // affects runtime behavior. See LocationTimeZoneProviderController for
+    // details.
+    optional bool geo_detection_run_in_background_enabled = 14;
 }
 
 /*
  * Logs information about an individual location time zone provider's state.
  *
  * Logged from:
- * frameworks/base/services/core/java/com/android/server/location/timezone/ControllerImpl.java
+ * frameworks/base/services/core/java/com/android/server/timezonedetector/location/RealProviderMetricsLogger.java
  */
 message LocationTimeZoneProviderStateChanged {
     // The index of the provider (primary = 0, secondary = 1)
@@ -17145,6 +17274,44 @@ message LocationTimeZoneProviderStateChanged {
 
     // The state of the provider.
     optional State state = 2 [(state_field_option).exclusive_state = true];
+}
+
+/*
+ * Logs information about the location time zone provider controller's state.
+ *
+ * Logged from:
+ * frameworks/base/services/core/java/com/android/server/timezonedetector/location/RealControllerMetricsLogger.java
+ */
+message LocationTimeZoneProviderControllerStateChanged {
+
+    enum State {
+        // A placeholder for unknown values.
+        UNKNOWN = 0;
+
+        // The providers are initializing.
+        PROVIDERS_INITIALIZING = 1;
+
+        // The controller is / has been stopped.
+        STOPPED = 2;
+
+        // The controller is started and is initializing.
+        INITIALIZING = 3;
+
+        // The controller is started and is certain of the time zone.
+        CERTAIN = 4;
+
+        // The controller is started and is uncertain of the time zone.
+        UNCERTAIN = 5;
+
+        // The controller has been destroyed.
+        DESTROYED = 6;
+
+        // The controller has failed.
+        FAILED = 7;
+    }
+
+    // The state of the provider.
+    optional State state = 1;
 }
 
 /*
@@ -18142,8 +18309,9 @@ message SipTransportFeatureTagStats {
  */
 message SipMessageResponse {
     enum Direction {
-        INCOMING = 0;
-        OUTGOING = 1;
+        UNKNOWN = 0;
+        INCOMING = 1;
+        OUTGOING = 2;
     }
     // the carrier id associated with this SIP delegate
     // Used as a dimension
@@ -18182,8 +18350,9 @@ message SipMessageResponse {
  */
 message SipTransportSession {
     enum Direction {
-        INCOMING = 0;
-        OUTGOING = 1;
+        UNKNOWN = 0;
+        INCOMING = 1;
+        OUTGOING = 2;
     }
     // the carrier id associated with this SIP delegate
     // Used as a dimension
@@ -18720,3 +18889,79 @@ message ApplicationLocalesChanged {
     optional Status status = 5;
 }
 
+/* Logs when the display HBM state changes.
+ *
+ * Logged from:
+ *   frameworks/base/services/core/java/com/android/server/display/HighBrightnessModeController.java
+ */
+message DisplayHbmStateChanged {
+    optional int32 display_id = 1;
+
+    // New HBM state
+    optional android.server.display.HbmState state = 2;
+
+    // The reason the state changes.
+    optional android.server.display.HbmStateTransitionReason reason = 3;
+}
+
+/*
+ * Logs when the display HBM brightness changes.
+ * Logged from:
+ *   frameworks/base/services/core/java/com/android/server/display/AutomaticBrightnessControllerjava
+ */
+message DisplayHbmBrightnessChanged {
+    optional int32 display_id = 1;
+
+    // display brightness
+    optional float brightness = 2;
+}
+
+/**
+ * Per-UID time at each GPU frequency spent running work on the GPU.
+ *
+ * Each pull creates multiple atoms, one per UID, up to at most 10 randomly selected UIDs.
+ *
+ * Pulled from:
+ *    frameworks/native/services/gpuservice/gpuwork/GpuWork.cpp
+ */
+message GpuFreqTimeInStatePerUid {
+    // The UID (i.e. app id) that scheduled work on the GPU.
+    optional int32 uid = 1 [(is_uid) = true];
+
+    // The time duration (in seconds) over which this data was collected (most
+    // likely 24 hours).
+    optional int32 time_duration_seconds = 2;
+
+    // The maximum frequency that we record. This should be 1000 (MHz), until
+    // more fields are added below.
+    optional int32 max_freq_mhz = 3;
+
+    // The time (in milliseconds) that the GPU spent at a particular frequency
+    // (in Mhz) while running work from the given |uid|. Frequency 0Mhz is
+    // special; it gives the total time for all "gaps" between work from this
+    // |uid| that are <= 1 second, as a way of estimating the time in which the
+    // GPU might power down between periodic work from this |uid|.
+    optional int32 freq_0_mhz_time_millis = 4;
+    optional int32 freq_50_mhz_time_millis = 5;
+    optional int32 freq_100_mhz_time_millis = 6;
+    optional int32 freq_150_mhz_time_millis = 7;
+    optional int32 freq_200_mhz_time_millis = 8;
+    optional int32 freq_250_mhz_time_millis = 9;
+    optional int32 freq_300_mhz_time_millis = 10;
+    optional int32 freq_350_mhz_time_millis = 11;
+    optional int32 freq_400_mhz_time_millis = 12;
+    optional int32 freq_450_mhz_time_millis = 13;
+    optional int32 freq_500_mhz_time_millis = 14;
+    optional int32 freq_550_mhz_time_millis = 15;
+    optional int32 freq_600_mhz_time_millis = 16;
+    optional int32 freq_650_mhz_time_millis = 17;
+    optional int32 freq_700_mhz_time_millis = 18;
+    optional int32 freq_750_mhz_time_millis = 19;
+    optional int32 freq_800_mhz_time_millis = 20;
+    optional int32 freq_850_mhz_time_millis = 21;
+    optional int32 freq_900_mhz_time_millis = 22;
+    optional int32 freq_950_mhz_time_millis = 23;
+    optional int32 freq_1000_mhz_time_millis = 24;
+
+    // Reserve 25-45 for future MHz time buckets.
+}
