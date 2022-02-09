@@ -628,6 +628,8 @@ message Atom {
             415 [(module) = "framework"];
         DisplayHbmStateChanged display_hbm_state_changed = 416 [(module) = "framework"];
         DisplayHbmBrightnessChanged display_hbm_brightness_changed = 417 [(module) = "framework"];
+        PersistentUriPermissionsFlushed persistent_uri_permissions_flushed =
+            418 [(module) = "framework"];
 
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
@@ -814,6 +816,8 @@ message Atom {
         GbaEvent gba_event = 10145 [(module) = "telephony"];
         PerSimStatus per_sim_status = 10146 [(module) = "telephony"];
         GpuFreqTimeInStatePerUid gpu_freq_time_in_state_per_uid = 10147;
+        PersistentUriPermissionsAmountPerPackage persistent_uri_permissions_amount_per_package =
+            10148 [(module) = "framework"];
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
@@ -14613,6 +14617,18 @@ message AudioPowerUsageDataReported {
         RECORD_TYPE = 7;  // other recording
     }
     optional AudioType type = 4;
+
+    // Minimum volume duration of the audio in seconds
+    optional int32 minimum_volume_duration_secs = 5;
+
+    // Minimum volume (0 ... 1.0)
+    optional float minimum_volume = 6;
+
+    // Maximum volume duration of the audio in seconds
+    optional int32 maximum_volume_duration_secs = 7;
+
+    // Maximum volume (0 ... 1.0)
+    optional float maximum_volume = 8;
 }
 
 /**
@@ -18855,10 +18871,10 @@ message NearbyDeviceScanStateChanged {
 message ApplicationLocalesChanged {
     // The uid which invoked this update. The locales for an application
     // could be changed from the in-app picker OR from the settings UI.
-    optional int32 calling_uid = 1;
+    optional int32 calling_uid = 1 [(is_uid) = true];
 
     // The uid for which the locale change is being done.
-    optional int32 target_uid = 2;
+    optional int32 target_uid = 2 [(is_uid) = true];
 
     // The new locales for the target package. A comma separated list of BCP 47
     // locale identifiers, compatible with LocaleList#forLanguageTags.
@@ -18964,4 +18980,16 @@ message GpuFreqTimeInStatePerUid {
     optional int32 freq_1000_mhz_time_millis = 24;
 
     // Reserve 25-45 for future MHz time buckets.
+}
+
+message PersistentUriPermissionsFlushed {
+    // Current amount of persistent uri permissions overall
+    optional int32 permissions_flushed_amount = 1;
+}
+
+message PersistentUriPermissionsAmountPerPackage {
+    // The uid persistent uri permissions amount reported for
+    optional int32 uid = 1 [(is_uid) = true];
+    // Current amount of persistent uri permissions for this package
+    optional int32 amount = 2;
 }
