@@ -3690,6 +3690,10 @@ message LauncherUIChanged {
 
     // Used to store features of the target (e.g. widget is reconfigurable, etc)
     optional int32 features = 25;
+
+    // Used to store on-device search related features of the target
+    // (e.g. spell-corrected query etc)
+    optional int32 search_attributes = 26;
 }
 
 message SmartSpaceCardReported {
