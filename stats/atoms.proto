@@ -10367,6 +10367,9 @@ message SystemMemory {
     // Total DMABUF memory allocations
     // Reported from os.Debug.getDmabufTotalExportedKb (S+)
     optional int32 dmabuf_total_exported_kb = 9;
+
+    // Total shmem allocations
+    optional int32 shmem_kb = 10;
 }
 
 /*
