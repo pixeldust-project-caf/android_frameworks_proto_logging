@@ -661,8 +661,9 @@ message Atom {
             [(module) = "framework"];
         HotwordDetectorEvents hotword_detector_events = 434
             [(module) = "framework"];
+        // 435, 436 not been used in this branch.
         BootCompletedBroadcastCompletionLatencyReported boot_completed_broadcast_completion_latency_reported =
-            435 [(module) = "framework"];
+            437 [(module) = "framework"];
         // StatsdStats tracks platform atoms with ids upto 500.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
     }
