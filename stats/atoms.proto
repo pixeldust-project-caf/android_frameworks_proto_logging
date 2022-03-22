@@ -9191,17 +9191,6 @@ message GnssConfigurationReported {
 }
 
 /**
- * Logs GNSS PSDS downloads as defined in IGnssPsds.aidl.
- *
- * Logged from:
- *   frameworks/base/services/core/java/com/android/server/location/gnss/GnssPsdsDownloader.java
- */
-message GnssPsdsDownloadReported {
-    // PSDS type as defined in PsdsType.aidl
-    optional int32 psds_type = 1;
-}
-
-/**
  * Logs when a NFC device's error occurred.
  * Logged from:
  *     system/nfc/src/nfc/nfc/nfc_ncif.cc
