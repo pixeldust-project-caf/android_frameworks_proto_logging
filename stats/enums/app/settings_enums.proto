@@ -12,6 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+ *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
  */
 
 syntax = "proto2";
@@ -3366,6 +3371,9 @@ enum PageId {
     // CATEGORY: SETTINGS
     // OS: T
     LE_AUDIO_BROADCAST_SCAN_QR_CODE = 1926;
+
+    // OPEN: Settings > Network & internet > Mobile network > Backup Calling > Dialog
+    BACKUP_CALLING_DIALOG = 1927;
 }
 
 // Battery Saver schedule types.
