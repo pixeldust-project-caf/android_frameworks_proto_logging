@@ -39,6 +39,7 @@ import "frameworks/proto_logging/stats/enums/debug/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/biometrics/enums.proto";
 import "frameworks/proto_logging/stats/enums/hardware/sensor/assist/enums.proto";
 import "frameworks/proto_logging/stats/enums/hotword/enums.proto";
+import "frameworks/proto_logging/stats/enums/jank/enums.proto";
 import "frameworks/proto_logging/stats/enums/media/audio/enums.proto";
 import "frameworks/proto_logging/stats/enums/media/enums.proto";
 import "frameworks/proto_logging/stats/enums/mms/enums.proto";
@@ -710,12 +711,22 @@ message Atom {
                 477 [(module) = "framework"];
         BluetoothDeviceNameReported bluetooth_device_name_reported = 478 [(module) = "bluetooth"];
         VibrationReported vibration_reported = 487 [(module) = "framework"];
+        // reserved 492
+        DisplayBrightnessChanged display_brightness_changed = 494 [(module) = "framework"];
+        ActivityActionBlocked activity_action_blocked = 495 [(module) = "framework"];
+        MediametricsSpatializerCapabilitiesReported mediametrics_spatializercapabilities_reported = 508;
+        MediametricsSpatializerDeviceEnabledReported mediametrics_spatializerdeviceenabled_reported = 509;
+        MediametricsHeadTrackerDeviceEnabledReported mediametrics_headtrackerdeviceenabled_reported = 510;
+        MediametricsHeadTrackerDeviceSupportedReported mediametrics_headtrackerdevicesupported_reported = 511;
+        HearingAidInfoReported hearing_aid_info_reported = 513 [(module) = "framework"];
+        DeviceWideJobConstraintChanged device_wide_job_constraint_changed =
+            514 [(module) = "framework"];
         // StatsdStats tracks platform atoms with ids upto 750.
         // Update StatsdStats::kMaxPushedAtomId when atom ids here approach that value.
     }
 
     // Pulled events will start at field 10000.
-    // Next: 10159
+    // Next: 10161
     oneof pulled {
         WifiBytesTransfer wifi_bytes_transfer = 10000 [(module) = "framework"];
         WifiBytesTransferByFgBg wifi_bytes_transfer_by_fg_bg = 10001 [(module) = "framework"];
@@ -905,13 +916,13 @@ message Atom {
         RemoteKeyProvisioningErrorCounts remote_key_provisioning_error_counts = 10155 [(module) = "remoteprovisioner"];
         IncomingMms incoming_mms = 10157 [(module) = "mms"];
         OutgoingMms outgoing_mms = 10158 [(module) = "mms"];
+        MultiUserInfo multi_user_info = 10160 [(module) = "framework"];
     }
 
     // DO NOT USE field numbers above 100,000 in AOSP.
     // Field numbers 100,000 - 199,999 are reserved for non-AOSP (e.g. OEMs) to use.
     // Field numbers 200,000 and above are reserved for future use; do not use them at all.
-
-    reserved 83, 10008, 10036, 10040, 10041;
+    reserved 83, 360 to 363, 492, 10008, 10036, 10040, 10041;
 }
 
 /**
@@ -1043,6 +1054,25 @@ message ScreenStateChanged {
     // New screen state, from frameworks/proto_logging/stats/enums/view/enums.proto.
     optional android.view.DisplayStateEnum state = 1
             [(state_field_option).exclusive_state = true, (state_field_option).nested = false];
+}
+
+/**
+ * Part of the go/activity-security project. Logs information about activity
+ * starts which would be blocked as part of the project.
+ *
+ * Logged from:
+ *  - frameworks/base/services/core/java/com/android/server/wm/ActivityStarter.java
+ */
+message ActivityActionBlocked {
+    optional int32 caller_uid = 1 [(is_uid) = true];
+    optional string caller_activity_class_name = 2;
+    optional int32 target_task_top_activity_uid = 3 [(is_uid) = true];
+    optional string target_task_top_activity_class_name = 4;
+    optional bool target_task_is_different = 5;
+    optional int32 target_activity_uid = 6 [(is_uid) = true];
+    optional string target_activity_class_name = 7;
+    optional string target_intent_action = 8;
+    optional int32 target_intent_flags = 9;
 }
 
 /**
@@ -4905,6 +4935,41 @@ message AppStartOccurred {
 
     // The timestamp(SystemClock#elapsedRealtime()) when starting activity.
     optional int64 activity_start_timestamp_millis = 22;
+
+    /**
+     * The process state of apps, keep in sync with
+     * frameworks/base/core/java/android/app/ActivityManager.java
+     */
+    enum AppProcessState {
+        PROCESS_STATE_UNKNOWN = -1;
+        PROCESS_STATE_PERSISTENT = 0;
+        PROCESS_STATE_PERSISTENT_UI = 1;
+        PROCESS_STATE_TOP = 2;
+        PROCESS_STATE_BOUND_TOP = 3;
+        PROCESS_STATE_FOREGROUND_SERVICE = 4;
+        PROCESS_STATE_BOUND_FOREGROUND_SERVICE = 5;
+        PROCESS_STATE_IMPORTANT_FOREGROUND = 6;
+        PROCESS_STATE_IMPORTANT_BACKGROUND = 7;
+        PROCESS_STATE_TRANSIENT_BACKGROUND = 8;
+        PROCESS_STATE_BACKUP = 9;
+        PROCESS_STATE_SERVICE = 10;
+        PROCESS_STATE_RECEIVER = 11;
+        PROCESS_STATE_TOP_SLEEPING = 12;
+        PROCESS_STATE_HEAVY_WEIGHT = 13;
+        PROCESS_STATE_HOME = 14;
+        PROCESS_STATE_LAST_ACTIVITY = 15;
+        PROCESS_STATE_CACHED_ACTIVITY = 16;
+        PROCESS_STATE_CACHED_ACTIVITY_CLIENT = 17;
+        PROCESS_STATE_CACHED_RECENT = 18;
+        PROCESS_STATE_CACHED_EMPTY = 19;
+        PROCESS_STATE_NONEXISTENT = 20;
+    }
+
+    // The process state of the launching activity prior to the launch.
+    optional AppProcessState process_state = 23;
+
+    // The oom adj score of the launching activity prior to the launch.
+    optional int32 process_oom_adj = 24;
 }
 
 message AppStartCanceled {
@@ -5404,6 +5469,12 @@ message LmkKillOccurred {
 
     // Max thrashing levels (workingset_refaults/filecache in %).
     optional int32 max_thrashing = 15;
+
+    // How many active foreground services across the system
+    optional int32 total_foreground_services = 16;
+
+    // How many processes hosting foreground services
+    optional int32 procs_with_foreground_services = 17;
 }
 
 /*
@@ -6204,6 +6275,15 @@ message BroadcastDeliveryEventReported {
 
     /** The start type of the host process. */
     optional ProcessStartType proc_start_type = 5;
+
+    /** The delay in ms from enqueue to dispatch of this intent to the set of receivers. */
+    optional int64 dispatch_delay = 6;
+
+    /** The delay in ms from beginning of dispatch to this specific receiver. */
+    optional int64 receive_delay = 7;
+
+    /** The delay in ms from dispatch to finish the handling of this intent. */
+    optional int64 finish_delay = 8;
 }
 
 /**
@@ -6947,77 +7027,10 @@ message BlobOpened{
  * Logged from:
  *  frameworks/base/core/java/com/android/internal/jank/FrameTracker.java
  *
- * Next Tag: 64
+ * Next Tag: 8
  */
 message UIInteractionFrameInfoReported {
-    enum InteractionType {
-        UNKNOWN = 0;
-        NOTIFICATION_SHADE_SWIPE = 1;
-        SHADE_SCROLL_FLING = 3;
-        SHADE_ROW_EXPAND = 4;
-        SHADE_ROW_SWIPE = 5;
-        SHADE_QS_EXPAND_COLLAPSE = 6;
-        SHADE_QS_SCROLL_SWIPE = 7;
-        LAUNCHER_APP_LAUNCH_FROM_RECENTS = 8;
-        LAUNCHER_APP_LAUNCH_FROM_ICON = 9;
-        LAUNCHER_APP_CLOSE_TO_HOME = 10;
-        LAUNCHER_APP_CLOSE_TO_PIP = 11;
-        LAUNCHER_QUICK_SWITCH = 12;
-        SHADE_HEADS_UP_APPEAR = 13;
-        SHADE_HEADS_UP_DISAPPEAR = 14;
-        SHADE_NOTIFICATION_ADD = 15;
-        SHADE_NOTIFICATION_REMOVE = 16;
-        SHADE_APP_LAUNCH = 17;
-        LOCKSCREEN_PASSWORD_APPEAR = 18;
-        LOCKSCREEN_PATTERN_APPEAR = 19;
-        LOCKSCREEN_PIN_APPEAR = 20;
-        LOCKSCREEN_PASSWORD_DISAPPEAR = 21;
-        LOCKSCREEN_PATTERN_DISAPPEAR = 22;
-        LOCKSCREEN_PIN_DISAPPEAR = 23;
-        LOCKSCREEN_TRANSITION_FROM_AOD = 24;
-        LOCKSCREEN_TRANSITION_TO_AOD = 25;
-        LAUNCHER_OPEN_ALL_APPS = 26;
-        LAUNCHER_ALL_APPS_SCROLL = 27;
-        LAUNCHER_APP_LAUNCH_FROM_WIDGET = 28;
-        SETTINGS_PAGE_SCROLL = 29;
-        LOCKSCREEN_UNLOCK_ANIMATION = 30;
-        SHADE_APP_LAUNCH_FROM_HISTORY_BUTTON = 31;
-        SHADE_APP_LAUNCH_FROM_MEDIA_PLAYER = 32;
-        SHADE_APP_LAUNCH_FROM_QS_TILE = 33;
-        SHADE_APP_LAUNCH_FROM_SETTINGS_BUTTON = 34;
-        STATUS_BAR_APP_LAUNCH_FROM_CALL_CHIP = 35;
-        PIP_TRANSITION = 36;
-        WALLPAPER_TRANSITION = 37;
-        USER_SWITCH = 38;
-        SPLASHSCREEN_AVD = 39;
-        SPLASHSCREEN_EXIT_ANIM = 40;
-        SCREEN_OFF = 41;
-        SCREEN_OFF_SHOW_AOD = 42;
-        ONE_HANDED_ENTER_TRANSITION = 43;
-        ONE_HANDED_EXIT_TRANSITION = 44;
-        UNFOLD_ANIM = 45;
-        SUW_LOADING_TO_SHOW_INFO_WITH_ACTIONS = 46;
-        SUW_SHOW_FUNCTION_SCREEN_WITH_ACTIONS = 47;
-        SUW_LOADING_TO_NEXT_FLOW = 48;
-        SUW_LOADING_SCREEN_FOR_STATUS = 49;
-        SPLIT_SCREEN_ENTER = 50;
-        SPLIT_SCREEN_EXIT = 51;
-        LOCKSCREEN_LAUNCH_CAMERA = 52;
-        SPLIT_SCREEN_RESIZE = 53;
-        SETTINGS_SLIDER = 54;
-        TAKE_SCREENSHOT = 55;
-        VOLUME_CONTROL = 56;
-        BIOMETRIC_PROMPT_TRANSITION = 57;
-        SETTINGS_TOGGLE = 58;
-        SHADE_DIALOG_OPEN = 59;
-        USER_DIALOG_OPEN = 60;
-        TASKBAR_EXPAND = 61;
-        TASKBAR_COLLAPSE = 62;
-        SHADE_CLEAR_ALL = 63;
-        reserved 2;
-    }
-
-    optional InteractionType interaction_type = 1;
+    optional android.jank.InteractionType interaction_type = 1;
 
     // Number of frames rendered during the interaction.
     optional int64 total_frames = 2;
@@ -7045,29 +7058,7 @@ message UIInteractionFrameInfoReported {
  *  frameworks/base/core/java/com/android/internal/util/LatencyTracker.java
  */
 message UIActionLatencyReported {
-    enum ActionType {
-        UNKNOWN = 0;
-        ACTION_EXPAND_PANEL = 1;
-        ACTION_TOGGLE_RECENTS = 2;
-        ACTION_FINGERPRINT_WAKE_AND_UNLOCK = 3;
-        ACTION_CHECK_CREDENTIAL = 4;
-        ACTION_CHECK_CREDENTIAL_UNLOCKED = 5;
-        ACTION_TURN_ON_SCREEN = 6;
-        ACTION_ROTATE_SCREEN = 7;
-        ACTION_FACE_WAKE_AND_UNLOCK = 8;
-        ACTION_START_RECENTS_ANIMATION = 9;
-        ACTION_ROTATE_SCREEN_CAMERA_CHECK = 10;
-        ACTION_ROTATE_SCREEN_SENSOR = 11;
-        ACTION_LOCKSCREEN_UNLOCK = 12;
-        ACTION_USER_SWITCH = 13;
-        ACTION_SWITCH_DISPLAY_UNFOLD = 14;
-        ACTION_UDFPS_ILLUMINATE = 15;
-        ACTION_SHOW_BACK_ARROW = 16;
-        ACTION_LOAD_SHARE_SHEET = 17;
-        ACTION_FOLD_TO_AOD = 19;
-    }
-
-    optional ActionType action = 1;
+    optional android.jank.ActionType action = 1;
 
     optional int64 latency_millis = 2;
 }
@@ -10069,11 +10060,14 @@ message SplitscreenUIChanged {
     // The reason for entering splitscreen
     enum EnterReason {
         UNKNOWN_ENTER = 0;
-        OVERVIEW = 1;
+        OVERVIEW = 1; // Deprecated, use LAUNCHER
         DRAG_LEFT = 2;
         DRAG_TOP = 3;
         DRAG_RIGHT = 4;
         DRAG_BOTTOM = 5;
+        LAUNCHER = 6;
+        MULTI_INSTANCE = 7;
+        NOTIFICATIONS = 8;
     }
 
     // The reason for exiting splitscreen
@@ -10190,7 +10184,8 @@ message BubbleDeveloperErrorReported {
 }
 
 /**
- * Logs that a constraint for a scheduled job has changed.
+ * Logs that a job-specific constraint for a scheduled job has changed.
+ * DeviceWideJobConstraintChanged will cover constraints that are normally the same for all jobs.
  *
  * Logged from:
  *     frameworks/base/services/core/java/com/android/server/job/controllers/JobStatus.java
@@ -10209,6 +10204,29 @@ message ScheduledJobConstraintChanged {
         SATISFIED = 2;
     }
     optional State state = 4;
+}
+
+/**
+ * Logs that a device-state-level JobScheduler constraint has changed. This doesn't take individual
+ * job or app characteristics into account. Individual jobs may have a different satisfaction value
+ * based on special policies. Individual job constraints (eg. connectivity or prefetch) are not
+ * logged in this atom.
+ *
+ * Logged from:
+ *     frameworks/base/services/core/java/com/android/server/job/controllers/<*>.java
+ */
+message DeviceWideJobConstraintChanged {
+    optional com.android.server.job.ConstraintEnum constraint = 1;
+
+    enum State {
+        UNKNOWN = 0;
+        UNSATISFIED = 1;
+        SATISFIED = 2;
+    }
+    optional State state = 2 [
+        (state_field_option).exclusive_state = true,
+        (state_field_option).nested = false
+    ];
 }
 
 /**
@@ -14011,6 +14029,25 @@ message AppFreezeChanged {
 
     // Time since last unfrozen.
     optional int64 time_unfrozen_millis = 4;
+
+    // The list of reason should be kept in sync with @OomAdjReason in OomAdjuster.java.
+    enum OomAdjReason {
+        NONE = 0;
+        ACTIVITY = 1;
+        FINISH_RECEIVER = 2;
+        START_RECEIVER = 3;
+        BIND_SERVICE = 4;
+        UNBIND_SERVICE = 5;
+        START_SERVICE = 6;
+        GET_PROVIDER = 7;
+        REMOVE_PROVIDER = 8;
+        UI_VISIBILITY = 9;
+        ALLOWLIST = 10;
+        PROCESS_BEGIN = 11;
+        PROCESS_END = 12;
+    }
+
+    optional OomAdjReason unfreeze_reason = 5;
 }
 
 /**
@@ -15252,6 +15289,20 @@ message UserInfo {
     optional bool is_user_running_unlocked = 7;
 }
 
+
+/**
+ * The MultiUserInfo information about maximum supported users on the device.
+ *
+ * This will be pulled from
+ *     frameworks/base/services/core/java/com/android/server/pm/UserManagerService.java
+ */
+message MultiUserInfo {
+    // Maximum users supported on the device
+    optional int32 max_supported_users = 1;
+    // Whether multi user setting is on.
+    optional bool multi_user_setting_on = 2;
+}
+
 /**
  * Logs when accessibility shortcut clicked.
  *
@@ -15492,6 +15543,133 @@ message AudioPowerUsageDataReported {
 }
 
 /**
+ * Logs the Spatializer capability when the Spatializer is created.
+ *
+ * We expect this to occur only once on a healthy system,
+ * when audioserver is initialized.
+ *
+ * On devices that do not support spatialization,
+ * SpatializerLevel returns SPATIALIZER_LEVEL_NONE only.
+ *
+ * Logged from:
+ *   frameworks/av/services/mediametrics/AudioAnalytics.cpp
+ */
+message MediametricsSpatializerCapabilitiesReported {
+    // Available head tracking modes
+    repeated android.media.audio.HeadTrackingMode head_tracking_modes = 1;
+
+    // Available spatializer levels
+    repeated android.media.audio.SpatializerLevel spatializer_levels = 2;
+
+    // Available spatializer modes
+    repeated android.media.audio.SpatializerMode spatializer_modes = 3;
+
+    // Available channel masks, with each channel position bitwise ORed.
+    // One or more bits from
+    // system/media/audio/include/system/audio-hal-enums.h
+    // audio_channel_mask_t, representing the channel configuration
+    // of AudioTrack data.
+    //
+    // Generally the most populated channel_mask is selected for use.
+    repeated int64 channel_masks = 4;
+}
+
+/**
+ * Logs when Spatializer is enabled or disabled for a device.
+ *
+ * The event field indicates the reason for enabling or disabling:
+ * through the Settings UI, startup/boot, or new device detection.
+ *
+ * The presence of this message indicates that the audio device type
+ * supports Spatialization; this is generally a fixed
+ * property of the platform and depends if the device type is considered
+ * BINAURAL or TRANSAURAL, and the Spatializer support for it.
+ *
+ * This logs existing saved state on BOOT and changes afterwards.
+ * Due to rpc to the MediaMetrics service which generates the atom,
+ * the timestamp of the atom may have a slight delay.
+ *
+ * Logged from:
+ *   frameworks/av/services/mediametrics/AudioAnalytics.cpp
+ */
+message MediametricsSpatializerDeviceEnabledReported {
+    // Device type enumeration, e.g. BUILTIN_SPEAKER, BT_A2DP, etc.
+    optional android.media.audio.AudioDeviceInfoType type = 1;
+
+    // The event field indicates the reason for enabling or disabling:
+    // NORMAL: from Settings UI.
+    // BOOT: on startup/boot.
+    // FIRST: on new device detection.
+    optional android.media.audio.SpatializerSettingEvent event = 2;
+
+    // Whether the spatializer is enabled on that device.
+    // This triggers only on a change of state.
+    // If multiple devices share the same type (e.g. bluetooth headsets),
+    // they will register separate messages.
+    optional bool enabled = 3;
+}
+
+/**
+ * Logs whether the HeadTracker is enabled for a device.
+ *
+ * This only changes if there is a HeadTracker associated with the device.
+ *
+ * This logs existing saved state on BOOT and changes afterwards.
+ * Due to rpc to the MediaMetrics service which generates the atom,
+ * the timestamp of the atom may have a slight delay.
+ *
+ * Logged from:
+ *   frameworks/av/services/mediametrics/AudioAnalytics.cpp
+ */
+message MediametricsHeadTrackerDeviceEnabledReported {
+    // Device type enumeration, e.g. BUILTIN_SPEAKER, BT_A2DP, etc.
+    optional android.media.audio.AudioDeviceInfoType type = 1;
+
+    // The event field indicates the reason for enabling or disabling:
+    // NORMAL: from Settings UI.
+    // BOOT: on startup/boot.
+    // FIRST: on new device detection.
+    optional android.media.audio.SpatializerSettingEvent event = 2;
+
+    // Whether the head tracker was enabled or disabled on that device.
+    // This triggers only on a change of state.
+    // If multiple devices share the same type (e.g. bluetooth headsets),
+    // they will register separate messages.
+    optional bool enabled = 3;
+}
+
+/**
+ * Logs whether the HeadTracker is supported for a device.
+ *
+ * Generally a fixed property of the device, but it is possible
+ * that the HeadTracker sensor might be turned off
+ * or be temporarily unavailable.
+ *
+ * This logs existing saved state on BOOT and changes afterwards.
+ * Due to rpc to the MediaMetrics service which generates the atom,
+ * the timestamp of the atom may have a slight delay.
+ *
+ * Logged from:
+ *   frameworks/av/services/mediametrics/AudioAnalytics.cpp
+ */
+message MediametricsHeadTrackerDeviceSupportedReported {
+    // Device type enumeration, e.g. BUILTIN_SPEAKER, BT_A2DP, etc.
+    optional android.media.audio.AudioDeviceInfoType type = 1;
+
+    // The event field indicates the reason for enabling or disabling:
+    // NORMAL: on sensor change.
+    // BOOT: on startup/boot.
+    // FIRST: on new device detection.
+    optional android.media.audio.SpatializerSettingEvent event = 2;
+
+    // Whether the head tracker is supported on that device.
+    // This triggers only on a change of state.
+    // If multiple devices share the same type (e.g. bluetooth headsets),
+    // they will register separate messages.
+    optional bool supported = 3;
+}
+
+/**
   * Pulls bytes transferred over WiFi and mobile networks sliced by uid, is_metered, and tag.
   *
   * Pulled from:
@@ -15569,6 +15747,9 @@ message MediaOutputOpInteractionReported {
 
     // Type of device that interaction with.
     optional android.app.settings.mediaoutput.MediumType target = 2;
+
+    // The package name of an application whose media session is being switched.
+    optional string media_session_package_name= 3;
 }
 
 /**
@@ -20820,6 +21001,13 @@ message AutofillPresentationEventReported {
         6;  // Session was prematurely committed. This can happen due to various
             // reasons, eg: app developers calling commit() earlier than when
             // they should.
+    NONE_SHOWN_FILL_REQUEST_FAILED =
+        7; // Autofill provider request failed. Different from timeout.
+    NONE_SHOWN_NO_FOCUS =
+        8; // Autofill provider request was triggered pre-focus. User never
+           // focussed on autofillable fields. This can happen for FillDialog
+           // where we trigger fill request at layout time.
+
   }
 
   // Id number which increases for each subsequent request.
@@ -20856,6 +21044,17 @@ message AutofillPresentationEventReported {
 
   // How the dataset is supposed to be shown to the user
   optional AutofillDisplayPresentationType display_presentation_type = 9;
+
+  // Autofill Service Provider's uid
+  optional int32 autofill_service_uid = 10 [(is_uid) = true];
+
+  // Inline suggestion host's uid. Populated only when
+  // AutofillDisplayPresentationType = INLINE
+  optional int32 inline_suggestion_host_uid = 11 [(is_uid) = true];
+
+  // Whether a new request was triggered or alternatively served from cached
+  // response.
+  optional bool is_request_triggered = 12;
 }
 
 // Tells how Autofill dataset was/will-be displayed.
@@ -21110,8 +21309,11 @@ message OnsOpportunisticEsimProvisioningComplete {
         // Unresolvable errors such as Invalid SMDP address or activation code.
         RESULT_UNRESOLVABLE_ERROR = 8;
 
-        //Auto provisioning disabled
+        // Auto provisioning disabled
         RESULT_AUTO_PROVISIONING_DISABLED = 9;
+
+        // eSIM provisioning failed
+        RESULT_ESIM_PROVISIONING_FAILED = 10;
     }
 
     // CBRS carrier id. Filled only while reporting failure cases.
@@ -21268,4 +21470,89 @@ message OutgoingMms {
 
     // Whether MmsService or carrier app uploaded the MMS to the network.
     optional bool handled_by_carrier_app = 12;
+}
+
+// Logs Display Brightness change events.
+message DisplayBrightnessChanged {
+
+    enum Reason {
+        REASON_UNKNOWN = 0;
+        REASON_MANUAL = 1;
+    }
+
+    // Display brightness before the brightness event, in nits.
+    optional float initial_nits = 1;
+
+    // Display brightness after the brightness event, in nits.
+    optional float end_nits = 2;
+
+    // Estimated ambient light, in lux.
+    optional float lux = 3;
+
+    // Physical display id, with format $ADAPTER_PREFIX:$ID, in this case
+    // "local:$PHYSICAL_ID".
+    optional string physical_display_id = 4;
+
+    // Whether the short term model was active at the time of the event.
+    optional bool short_term_model_active = 5;
+
+    // The factor to adjust the screen brightness in low power mode in the range
+    // 0 (screen off) to 1 (no change).
+    // If not applied, this is set to -1.
+    optional float power_brightness_factor = 6;
+
+    // The level of Reduce Bright Colors (RBC) intensity, the range is [0, 100].
+    // If RBC is not enabled, this is set to -1;
+    optional int32 reduce_bright_colors_strength = 7;
+
+    // Max nits value when High Brightness Mode (HBM) is enabled.
+    // If HBM is not enabled, this is set to -1;
+    optional float hbm_current_max = 8;
+
+    // Thermal throttling cap.
+    // If thermal throttling not enabled, this is -1.
+    optional float thermal_throttling_cap = 9;
+
+    // Whether adaptive brightness is enabled.
+    optional bool adaptive_brightness_enabled = 10;
+
+    // Reason that triggered the brightness event to occur.
+    optional Reason reason = 11;
+}
+
+/**
+ * Logs information when a hearing aid is bonded
+ *
+ * Logged from:
+ *   frameworks/base/packages/SettingsLib/src/com/android/settingslib/bluetooth/
+ *   CachedBluetoothDevice.java
+ */
+message HearingAidInfoReported {
+    // The device mode of the bonded hearing aid
+    // Mode definition for hearing aids. See {@link BluetoothHearingAid}.
+    enum DeviceMode {
+        MODE_UNKNOWN = -1;
+        MONAURAL = 0;
+        BINAURAL = 1;
+    }
+    optional DeviceMode device_mode = 1;
+
+    // The device side of the bonded hearing aid
+    // Side definition for hearing aids. See {@link BluetoothHearingAid}.
+    enum DeviceSide {
+        SIDE_UNKNOWN = -1;
+        LEFT = 0;
+        RIGHT = 1;
+    }
+    optional DeviceSide device_side = 2;
+
+    // The entry page id where the bonding process starts
+    enum BondEntry {
+        PAGE_UNKNOWN = -1;
+        CONNECTED_DEVICES = 0;
+        ACCESSIBILITY_HEARING_AIDS = 1;
+        ACCESSIBILITY_HEARING_AID_PAIR_ANOTHER = 2;
+        BLUETOOTH = 3;
+    }
+    optional BondEntry bond_entry = 3;
 }
