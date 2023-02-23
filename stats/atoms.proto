@@ -14900,6 +14900,23 @@ message DataStallRecoveryReported {
 
     // The data stall recovered reason. Available from Android T.
     optional android.telephony.DataStallRecoveredReason reason = 10;
+
+    // Signal strength of the other phone if DSDS when stall happened.
+    // SIGNAL_STRENGTH_NONE_OR_UNKNOWN(0) if single SIM.
+    optional android.telephony.SignalStrengthEnum other_phone_signal_strength = 11;
+
+    // PS WWAN Network Registration state of the other phone if DSDS when stall happened.
+    // REGISTRATION_STATE_NOT_REGISTERED_OR_SEARCHING(0) if single SIM.
+    optional android.telephony.NetworkRegistrationState other_phone_reg_state = 12;
+
+    // PS WWAN Network Registration state of the default phone when data stall.
+    optional android.telephony.NetworkRegistrationState phone_reg_state = 13;
+
+    // collect the first validation after recovery when data stall occurs.
+    optional bool is_first_validation_after_recovery = 14;
+
+    // The phone id when doing the recovery action.
+    optional int32 phone_id = 15;
 }
 
 /**
@@ -15281,8 +15298,8 @@ message SharesheetStarted {
     optional ResolverActivityIntent intent_type = 9;
     // The number of custom actions that the calling app has provided.
     optional int32 num_provided_custom_actions = 10;
-    // True if the calling app has provided an action for media reselection.
-    optional bool reselection_action_provided = 11;
+    // True if the calling app has provided an action for share modification.
+    optional bool modify_share_action_provided = 11;
 }
 
 /**
