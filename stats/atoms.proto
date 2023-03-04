@@ -747,6 +747,8 @@ message Atom {
     extensions 615; // BluetoothL2capCocServerConnection bluetooth_l2cap_coc_server_connection
     extensions 631; // FullScreenIntentLaunched full_screen_intent_launched
     extensions 632; // BalAllowed bal_allowed
+    extensions 656; // BluetoothLeSessionConnected bluetooth_le_session_connected
+    extensions 9999; // Atom9999 atom_9999
 
     // Pulled events will start at field 10000.
     // Next: 10175
