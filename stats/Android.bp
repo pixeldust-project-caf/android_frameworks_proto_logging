@@ -78,6 +78,7 @@ enum_protos = [
 atom_protos = [
     "atoms.proto",
     "atoms/bluetooth/*.proto",
+    "atoms/framework/*.proto",
 ]
 
 cc_library_host_shared {
